@@ -1,4 +1,5 @@
 #include "EntitiesView.h"
+#include "TextScroller.h"
 #include <algorithm>
 
 EntitiesView::EntitiesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect)
@@ -41,6 +42,7 @@ void EntitiesView::draw(DisplayManager& display) {
     
     // Draw sub-tab bar
     canvas->fillRect(0, 20, 240, 15, 0x2124); // Slightly darker than tab bar
+    canvas->setTextWrap(false);
     
     int unoffsetX = 0;
     for (int i = 0; i < _currentSubTab; i++) {
@@ -67,6 +69,7 @@ void EntitiesView::draw(DisplayManager& display) {
         }
         currentX += tabWidth;
     }
+    canvas->setTextWrap(true);
     
     // Draw the list starting below the sub-tab bar (Y=35)
     int y = 37;
@@ -104,19 +107,7 @@ void EntitiesView::draw(DisplayManager& display) {
             canvas->print("  ");
         }
         
-        String dispName = entity->friendlyName;
-        if (idx == _selectedIndex && dispName.length() > 20) {
-            int overflow = dispName.length() - 20;
-            int cycle = (millis() / 250) % ((overflow + 4) * 2); 
-            int offset = 0;
-            if (cycle < 4) offset = 0;
-            else if (cycle < overflow + 4) offset = cycle - 4;
-            else if (cycle < overflow + 8) offset = overflow;
-            else offset = overflow - (cycle - (overflow + 8));
-            dispName = dispName.substring(offset, offset + 20);
-        } else if (dispName.length() > 20) {
-            dispName = dispName.substring(0, 17) + "...";
-        }
+        String dispName = TextScroller::visible(entity->friendlyName, 20, idx == _selectedIndex);
         canvas->print(dispName);
         
         // State on the right

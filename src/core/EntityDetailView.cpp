@@ -1,4 +1,5 @@
 #include "EntityDetailView.h"
+#include "TextScroller.h"
 
 EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService)
     : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _config(config) {}
@@ -20,15 +21,14 @@ void EntityDetailView::draw(DisplayManager& display) {
     canvas->print(entity.domain);
     
     // Content
-    canvas->setCursor(10, 30);
+    canvas->setCursor(4, 24);
     canvas->setTextColor(TFT_CYAN);
-    canvas->setTextSize(2);
+    canvas->setTextSize(1);
     
-    String dispName = entity.friendlyName;
-    if (dispName.length() > 15) dispName = dispName.substring(0, 15) + "...";
+    String dispName = TextScroller::visible(entity.friendlyName, 38);
     canvas->println(dispName);
     
-    canvas->setCursor(10, 60);
+    canvas->setCursor(4, 38);
     canvas->setTextColor(TFT_WHITE);
     canvas->print("State: ");
     
@@ -47,33 +47,33 @@ void EntityDetailView::draw(DisplayManager& display) {
     canvas->setTextSize(1);
     
     if (entity.domain == "media_player") {
-        // Now Playing info
-        int infoY = 80;
+        // Keep the footer clear while giving the track title more visual weight.
+        int infoY = 54;
         
         if (!entity.mediaTitle.isEmpty()) {
             canvas->setCursor(10, infoY);
             canvas->setTextColor(TFT_WHITE);
-            String title = entity.mediaTitle;
-            if (title.length() > 35) title = title.substring(0, 32) + "...";
+            canvas->setTextSize(2);
+            String title = TextScroller::visible(entity.mediaTitle, 18);
             canvas->print(title);
-            infoY += 11;
+            infoY += 18;
         }
         
         if (!entity.mediaArtist.isEmpty()) {
             canvas->setCursor(10, infoY);
             canvas->setTextColor(TFT_CYAN);
+            canvas->setTextSize(1);
             String artist = entity.mediaArtist;
             if (!entity.mediaAlbum.isEmpty()) {
                 artist += " - " + entity.mediaAlbum;
             }
-            if (artist.length() > 35) artist = artist.substring(0, 32) + "...";
+            artist = TextScroller::visible(artist, 35, false);
             canvas->print(artist);
-            infoY += 11;
+            infoY += 13;
         }
         
         // Progress bar
         if (entity.mediaDuration > 0) {
-            infoY += 2;
             float progress = entity.mediaPosition / entity.mediaDuration;
             if (progress > 1.0f) progress = 1.0f;
             
@@ -84,12 +84,13 @@ void EntityDetailView::draw(DisplayManager& display) {
             int durSec = (int)entity.mediaDuration % 60;
             
             canvas->setCursor(10, infoY);
+            canvas->setTextSize(1);
             canvas->setTextColor(TFT_LIGHTGREY);
             char timeBuf[20];
             snprintf(timeBuf, sizeof(timeBuf), "%d:%02d / %d:%02d", posMin, posSec, durMin, durSec);
             canvas->print(timeBuf);
             
-            infoY += 11;
+            infoY += 10;
             // Bar background
             canvas->fillRect(10, infoY, 180, 5, 0x2124);
             // Bar fill
@@ -99,8 +100,9 @@ void EntityDetailView::draw(DisplayManager& display) {
         }
         
         // Volume
-        infoY += 2;
+        infoY = 108;
         canvas->setCursor(10, infoY);
+        canvas->setTextSize(1);
         canvas->setTextColor(TFT_LIGHTGREY);
         int volPct = (int)(entity.volumeLevel * 100);
         canvas->print("Vol: ");

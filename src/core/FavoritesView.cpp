@@ -1,4 +1,5 @@
 #include "FavoritesView.h"
+#include "TextScroller.h"
 
 FavoritesView::FavoritesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect)
     : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect) {}
@@ -65,19 +66,7 @@ void FavoritesView::draw(DisplayManager& display) {
         if (idx == _selectedIndex) canvas->setTextColor(TFT_WHITE);
         else canvas->setTextColor(TFT_LIGHTGREY);
         
-        String dispName = entity.friendlyName;
-        if (idx == _selectedIndex && dispName.length() > 20) {
-            int overflow = dispName.length() - 20;
-            int cycle = (millis() / 250) % ((overflow + 4) * 2); 
-            int offset = 0;
-            if (cycle < 4) offset = 0;
-            else if (cycle < overflow + 4) offset = cycle - 4;
-            else if (cycle < overflow + 8) offset = overflow;
-            else offset = overflow - (cycle - (overflow + 8));
-            dispName = dispName.substring(offset, offset + 20);
-        } else if (dispName.length() > 20) {
-            dispName = dispName.substring(0, 17) + "...";
-        }
+        String dispName = TextScroller::visible(entity.friendlyName, 20, idx == _selectedIndex);
         canvas->print(dispName);
         
         // State on the right
