@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "KeyboardManager.h"
 
 void KeyboardManager::update() {
@@ -12,7 +13,12 @@ bool KeyboardManager::wasEnterPressed() const {
 }
 
 bool KeyboardManager::wasBackspacePressed() const {
-    return _currentStatus.del && !_lastStatus.del;
+    return (_currentStatus.del && !_lastStatus.del) || 
+           (_currentStatus.esc && !_lastStatus.esc) ||
+           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '`') != _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '`') == _lastStatus.word.end()) ||
+           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '~') != _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '~') == _lastStatus.word.end());
 }
 
 std::vector<char> KeyboardManager::getNewChars() const {
@@ -30,4 +36,32 @@ std::vector<char> KeyboardManager::getNewChars() const {
         }
     }
     return new_chars;
+}
+
+bool KeyboardManager::wasTabPressed() const {
+    return _currentStatus.tab && !_lastStatus.tab;
+}
+
+bool KeyboardManager::wasUpPressed() const {
+    return (_currentStatus.up && !_lastStatus.up) || 
+           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), ';') != _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), ';') == _lastStatus.word.end());
+}
+
+bool KeyboardManager::wasDownPressed() const {
+    return (_currentStatus.down && !_lastStatus.down) || 
+           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '.') != _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '.') == _lastStatus.word.end());
+}
+
+bool KeyboardManager::wasLeftPressed() const {
+    return (_currentStatus.left && !_lastStatus.left) || 
+           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), ',') != _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), ',') == _lastStatus.word.end());
+}
+
+bool KeyboardManager::wasRightPressed() const {
+    return (_currentStatus.right && !_lastStatus.right) || 
+           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '/') != _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '/') == _lastStatus.word.end());
 }

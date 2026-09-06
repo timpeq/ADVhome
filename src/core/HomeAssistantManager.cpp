@@ -1,6 +1,6 @@
 #include "HomeAssistantManager.h"
 
-HomeAssistantManager::HomeAssistantManager(ConfigManager& config) : _config(config) {}
+HomeAssistantManager::HomeAssistantManager(ConfigManager& config, EntityManager& entityManager) : _config(config), _entityManager(entityManager) {}
 
 void HomeAssistantManager::begin() {
     String url = _config.getHAUrl();
@@ -38,7 +38,7 @@ void HomeAssistantManager::begin() {
     }
     
     // Fast reconnect
-    _ws.setReconnectInterval(5000);
+    Serial.println(String("[HA] Attempting connection to ") + (isSecure ? "wss://" : "ws://") + host + ":" + String(port) + "/api/websocket"); _ws.setReconnectInterval(5000);
 }
 
 void HomeAssistantManager::update() {
@@ -59,8 +59,37 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
             break;
             
         case WStype_TEXT: {
+            JsonDocument filter;
+            filter["type"] = true;
+            filter["id"] = true;
+            filter["success"] = true;
+            filter["ha_version"] = true;
+            
+            filter["result"][0]["entity_id"] = true;
+            filter["result"][0]["state"] = true;
+            filter["result"][0]["attributes"]["friendly_name"] = true;
+            filter["result"][0]["attributes"]["media_title"] = true;
+            filter["result"][0]["attributes"]["media_artist"] = true;
+            filter["result"][0]["attributes"]["media_album_name"] = true;
+            filter["result"][0]["attributes"]["media_duration"] = true;
+            filter["result"][0]["attributes"]["media_position"] = true;
+            filter["result"][0]["attributes"]["volume_level"] = true;
+            filter["result"][0]["attributes"]["is_volume_muted"] = true;
+            
+            filter["event"]["event_type"] = true;
+            filter["event"]["data"]["entity_id"] = true;
+            filter["event"]["data"]["new_state"]["state"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["friendly_name"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["media_title"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["media_artist"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["media_album_name"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["media_duration"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["media_position"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["volume_level"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["is_volume_muted"] = true;
+
             JsonDocument doc;
-            DeserializationError error = deserializeJson(doc, payload);
+            DeserializationError error = deserializeJson(doc, payload, DeserializationOption::Filter(filter));
             
             if (!error) {
                 String msgType = doc["type"] | "";
@@ -81,12 +110,55 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                     _isAuthenticated = true;
                     _haVersion = doc["ha_version"] | "Unknown";
                     Serial.println("[HA] Auth OK! Version: " + _haVersion);
+                    
+                    // Subscribe to state changes (initial states already fetched via HTTP)
+                    _ws.sendTXT("{\"id\": 2, \"type\": \"subscribe_events\", \"event_type\": \"state_changed\"}");
                 }
                 else if (msgType == "auth_invalid") {
                     Serial.println("[HA] Auth Invalid! Clearing config...");
                     _config.clearHAConfig();
                     _ws.disconnect();
                 }
+                else if (msgType == "result" && doc["id"] == 1 && doc["success"]) {
+                    JsonArray result = doc["result"].as<JsonArray>();
+                    for (JsonObject stateObj : result) {
+                        String entity_id = stateObj["entity_id"].as<String>();
+                        String state = stateObj["state"].as<String>();
+                        String friendly_name = stateObj["attributes"]["friendly_name"] | "";
+                        _entityManager.updateEntity(entity_id, state, friendly_name);
+                        if (entity_id.startsWith("media_player.")) {
+                            _entityManager.updateMediaAttributes(entity_id,
+                                stateObj["attributes"]["media_title"] | "",
+                                stateObj["attributes"]["media_artist"] | "",
+                                stateObj["attributes"]["media_album_name"] | "",
+                                stateObj["attributes"]["media_duration"] | 0.0f,
+                                stateObj["attributes"]["media_position"] | 0.0f,
+                                stateObj["attributes"]["volume_level"] | 0.0f,
+                                stateObj["attributes"]["is_volume_muted"] | false);
+                        }
+                    }
+                    Serial.println("[HA] Initial states loaded.");
+                }
+                else if (msgType == "event" && doc["event"]["event_type"] == "state_changed") {
+                    JsonObject eventData = doc["event"]["data"];
+                    String entity_id = eventData["entity_id"].as<String>();
+                    String state = eventData["new_state"]["state"].as<String>();
+                    String friendly_name = eventData["new_state"]["attributes"]["friendly_name"] | "";
+                    _entityManager.updateEntity(entity_id, state, friendly_name);
+                    if (entity_id.startsWith("media_player.")) {
+                        JsonObject attrs = eventData["new_state"]["attributes"];
+                        _entityManager.updateMediaAttributes(entity_id,
+                            attrs["media_title"] | "",
+                            attrs["media_artist"] | "",
+                            attrs["media_album_name"] | "",
+                            attrs["media_duration"] | 0.0f,
+                            attrs["media_position"] | 0.0f,
+                            attrs["volume_level"] | 0.0f,
+                            attrs["is_volume_muted"] | false);
+                    }
+                }
+            } else {
+                Serial.println("[HA] JSON Parse Failed!");
             }
             break;
         }
@@ -100,4 +172,128 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
         case WStype_PONG:
             break;
     }
+}
+
+void HomeAssistantManager::callService(const String& domain, const String& service, const String& entity_id) {
+    if (!_isConnected || !_isAuthenticated) return;
+    
+    static int nextId = 100;
+    
+    JsonDocument doc;
+    doc["id"] = nextId++;
+    doc["type"] = "call_service";
+    doc["domain"] = domain;
+    doc["service"] = service;
+    
+    JsonObject target = doc["target"].to<JsonObject>();
+    target["entity_id"] = entity_id;
+    
+    String payload;
+    serializeJson(doc, payload);
+    
+    _ws.sendTXT(payload);
+    Serial.println("[HA] Sent call_service: " + payload);
+}
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+
+void HomeAssistantManager::fetchInitialStates() {
+    String url = _config.getHAUrl();
+    if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
+    url += "/api/states";
+    
+    Serial.println("[HA] Fetching initial states via HTTP Chunking: " + url);
+    
+    HTTPClient http;
+    WiFiClientSecure *secureClient = nullptr;
+    WiFiClient *client = nullptr;
+    
+    if (url.startsWith("https")) {
+        secureClient = new WiFiClientSecure();
+        secureClient->setInsecure();
+        http.begin(*secureClient, url);
+    } else {
+        client = new WiFiClient();
+        http.begin(*client, url);
+    }
+    
+    http.addHeader("Authorization", "Bearer " + _config.getHAToken());
+    http.addHeader("Content-Type", "application/json");
+    
+    int httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK) {
+        WiFiClient* stream = http.getStreamPtr();
+        
+        // Skip until '['
+        while (stream->connected() || stream->available()) {
+            if (stream->available() && stream->read() == '[') break;
+            delay(1);
+        }
+        
+        int braceCount = 0;
+        String objStr = "";
+        objStr.reserve(2048);
+        bool inString = false;
+        bool escape = false;
+        
+        int count = 0;
+        
+        while (stream->connected() || stream->available()) {
+            if (!stream->available()) {
+                delay(1);
+                continue;
+            }
+            
+            char c = stream->read();
+            
+            if (c == ']' && braceCount == 0) break;
+            
+            if (braceCount > 0 || c == '{') {
+                objStr += c;
+                
+                if (c == '"' && !escape) inString = !inString;
+                
+                if (!inString) {
+                    if (c == '{') braceCount++;
+                    else if (c == '}') {
+                        braceCount--;
+                        if (braceCount == 0) {
+                            JsonDocument doc;
+                            if (!deserializeJson(doc, objStr)) {
+                                String entity_id = doc["entity_id"].as<String>();
+                                String state = doc["state"].as<String>();
+                                String friendly_name = doc["attributes"]["friendly_name"] | "";
+                                _entityManager.updateEntity(entity_id, state, friendly_name);
+                                if (entity_id.startsWith("media_player.")) {
+                                    _entityManager.updateMediaAttributes(entity_id,
+                                        doc["attributes"]["media_title"] | "",
+                                        doc["attributes"]["media_artist"] | "",
+                                        doc["attributes"]["media_album_name"] | "",
+                                        doc["attributes"]["media_duration"] | 0.0f,
+                                        doc["attributes"]["media_position"] | 0.0f,
+                                        doc["attributes"]["volume_level"] | 0.0f,
+                                        doc["attributes"]["is_volume_muted"] | false);
+                                }
+                                count++;
+                            }
+                            objStr = "";
+                        }
+                    }
+                }
+                
+                if (c == '\\' && !escape) escape = true;
+                else escape = false;
+            }
+        }
+        Serial.println("[HA] Loaded " + String(count) + " entities via HTTP chunking.");
+    } else {
+        Serial.println(String("[HA] HTTP GET failed, error: ") + http.errorToString(httpCode).c_str());
+    }
+    http.end();
+    
+    if (secureClient) delete secureClient;
+    if (client) delete client;
 }

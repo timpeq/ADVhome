@@ -1,0 +1,80 @@
+#include "TabController.h"
+
+void TabController::addView(View* view, const String& name) {
+    _tabs.push_back({view, name});
+}
+
+void TabController::update(KeyboardManager& keyboard, DisplayManager& display, bool forceRedraw, bool showBattery) {
+    if (_tabs.empty()) return;
+    
+    bool redraw = forceRedraw;
+    
+    if (keyboard.wasTabPressed()) {
+        nextTab();
+        redraw = true;
+    }
+    
+    // Pass input to the active view
+    if (_tabs[_currentTabIndex].view->handleInput(keyboard)) {
+        redraw = true; // The view handled it and probably needs a redraw
+    }
+    
+    if (redraw) {
+        display.clear();
+        drawTabBar(display, showBattery);
+        _tabs[_currentTabIndex].view->draw(display);
+        display.push();
+    }
+}
+
+void TabController::nextTab() {
+    if (_tabs.empty()) return;
+    _tabs[_currentTabIndex].view->onExit();
+    _currentTabIndex = (_currentTabIndex + 1) % _tabs.size();
+    _tabs[_currentTabIndex].view->onEnter();
+}
+
+void TabController::prevTab() {
+    if (_tabs.empty()) return;
+    _tabs[_currentTabIndex].view->onExit();
+    if (_currentTabIndex == 0) {
+        _currentTabIndex = _tabs.size() - 1;
+    } else {
+        _currentTabIndex--;
+    }
+    _tabs[_currentTabIndex].view->onEnter();
+}
+
+void TabController::drawTabBar(DisplayManager& display, bool showBattery) {
+    auto canvas = display.getCanvas();
+    canvas->fillRect(0, 0, 240, 20, 0x18E3); // Dark greyish blue
+    
+    if (_tabs.size() == 0) return;
+    
+    int tabAreaWidth = showBattery ? 200 : 240;
+    int tabWidth = tabAreaWidth / _tabs.size();
+    
+    for (size_t i = 0; i < _tabs.size(); i++) {
+        if (i == (size_t)_currentTabIndex) {
+            canvas->fillRect(i * tabWidth, 0, tabWidth, 20, TFT_BLUE);
+            canvas->setTextColor(TFT_WHITE);
+        } else {
+            canvas->setTextColor(TFT_LIGHTGREY);
+        }
+        canvas->setTextSize(1);
+        
+        // Center text roughly
+        int textX = (i * tabWidth) + (tabWidth / 2) - (_tabs[i].name.length() * 3);
+        canvas->setCursor(textX, 6);
+        canvas->print(_tabs[i].name);
+    }
+    
+    if (showBattery) {
+        int batLevel = M5.Power.getBatteryLevel();
+        canvas->fillRect(200, 0, 40, 20, 0x18E3);
+        canvas->setTextColor(TFT_GREEN);
+        canvas->setTextSize(1);
+        canvas->setCursor(210, 6);
+        canvas->print(String(batLevel) + "%");
+    }
+}

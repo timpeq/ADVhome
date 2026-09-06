@@ -49,3 +49,81 @@ void ConfigManager::clearHAConfig() {
     _prefs.remove("ha_url");
     _prefs.remove("ha_token");
 }
+
+std::vector<String> ConfigManager::getFavorites() {
+    String favStr = _prefs.getString("favorites", "");
+    std::vector<String> result;
+    int start = 0;
+    int end = favStr.indexOf(',');
+    while (end != -1) {
+        result.push_back(favStr.substring(start, end));
+        start = end + 1;
+        end = favStr.indexOf(',', start);
+    }
+    if (start < favStr.length()) {
+        result.push_back(favStr.substring(start));
+    }
+    return result;
+}
+
+void ConfigManager::addFavorite(const String& entity_id) {
+    if (isFavorite(entity_id)) return;
+    String favStr = _prefs.getString("favorites", "");
+    if (favStr.length() > 0) {
+        favStr += ",";
+    }
+    favStr += entity_id;
+    _prefs.putString("favorites", favStr);
+}
+
+void ConfigManager::removeFavorite(const String& entity_id) {
+    auto favs = getFavorites();
+    String newStr = "";
+    for (const auto& fav : favs) {
+        if (fav != entity_id) {
+            if (newStr.length() > 0) newStr += ",";
+            newStr += fav;
+        }
+    }
+    _prefs.putString("favorites", newStr);
+}
+
+bool ConfigManager::isFavorite(const String& entity_id) {
+    auto favs = getFavorites();
+    for (const auto& fav : favs) {
+        if (fav == entity_id) return true;
+    }
+    return false;
+}
+// Adding new settings to ConfigManager.cpp
+bool ConfigManager::getShowBattery() {
+    return _prefs.getBool("show_battery", true);
+}
+
+void ConfigManager::setShowBattery(bool show) {
+    _prefs.putBool("show_battery", show);
+}
+
+int ConfigManager::getReconnectInterval() {
+    return _prefs.getInt("recon_int", 5000);
+}
+
+void ConfigManager::setReconnectInterval(int ms) {
+    _prefs.putInt("recon_int", ms);
+}
+
+int ConfigManager::getBackButtonStyle() {
+    return _prefs.getInt("back_btn_sty", 0);
+}
+
+void ConfigManager::setBackButtonStyle(int style) {
+    _prefs.putInt("back_btn_sty", style);
+}
+
+int ConfigManager::getScrollStyle() {
+    return _prefs.getInt("scroll_sty", 0);
+}
+
+void ConfigManager::setScrollStyle(int style) {
+    _prefs.putInt("scroll_sty", style);
+}

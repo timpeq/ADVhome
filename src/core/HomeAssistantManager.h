@@ -4,14 +4,19 @@
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
 #include "ConfigManager.h"
+#include "EntityManager.h"
 #include <Arduino.h>
 
 class HomeAssistantManager {
 public:
-    HomeAssistantManager(ConfigManager& config);
+    HomeAssistantManager(ConfigManager& config, EntityManager& entityManager);
     
     void begin();
     void update();
+    
+    void fetchInitialStates();
+    
+    void callService(const String& domain, const String& service, const String& entity_id);
     
     bool isConnected() const { return _isConnected; }
     bool isAuthenticated() const { return _isAuthenticated; }
@@ -19,6 +24,7 @@ public:
     
 private:
     ConfigManager& _config;
+    EntityManager& _entityManager;
     WebSocketsClient _ws;
     
     bool _isConnected = false;

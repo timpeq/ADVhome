@@ -7,6 +7,13 @@
 #include "ConfigManager.h"
 #include "SetupPortal.h"
 #include "HomeAssistantManager.h"
+#include "EntityManager.h"
+#include "TabController.h"
+#include "ConfigView.h"
+#include "DiagnosticView.h"
+#include "EntitiesView.h"
+#include "FavoritesView.h"
+#include "EntityDetailView.h"
 #include <Arduino.h>
 
 enum class AppState {
@@ -30,8 +37,18 @@ private:
     DisplayManager _display;
     WifiConnectionManager _wifi;
     ConfigManager _config;
+    EntityManager _entityManager;
     SetupPortal* _setupPortal = nullptr;
     HomeAssistantManager* _haManager = nullptr;
+    
+    TabController _tabController;
+    DiagnosticView* _diagView = nullptr;
+    EntitiesView* _entitiesView = nullptr;
+    FavoritesView* _favoritesView = nullptr;
+    ConfigView* _configView = nullptr;
+    EntityDetailView* _detailView = nullptr;
+    
+    bool _isDetailViewActive = false;
     
     AppState _currentState = AppState::SCANNING;
     AppState _lastState = (AppState)-1;

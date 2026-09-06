@@ -10,6 +10,11 @@ public:
     
     bool wasEnterPressed() const;
     bool wasBackspacePressed() const;
+    bool wasTabPressed() const;
+    bool wasUpPressed() const;
+    bool wasDownPressed() const;
+    bool wasLeftPressed() const;
+    bool wasRightPressed() const;
     
     // Returns any new character keys that were pressed this frame
     std::vector<char> getNewChars() const;

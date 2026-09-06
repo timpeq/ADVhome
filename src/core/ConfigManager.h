@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include <vector>
 
 class ConfigManager {
 public:
@@ -23,6 +24,29 @@ public:
     void saveHAConfig(const String& url, const String& token);
     void clearHAConfig();
 
+    // Favorites Configuration
+    std::vector<String> getFavorites();
+    void addFavorite(const String& entity_id);
+    void removeFavorite(const String& entity_id);
+    bool isFavorite(const String& entity_id);
+    
+    // UI Settings
+    bool getShowBattery();
+    void setShowBattery(bool show);
+    
+    // Connection Settings
+    int getReconnectInterval();
+    void setReconnectInterval(int ms);
+    
+    // Controls
+    // 0 = Both, 1 = Left Arrow Only, 2 = ESC/Tilde Only
+    int getBackButtonStyle();
+    void setBackButtonStyle(int style);
+    
+    // 0 = Left/Right scrolls 1 item, 1 = Left/Right pages up/down
+    int getScrollStyle();
+    void setScrollStyle(int style);
+    
 private:
     Preferences _prefs;
 };

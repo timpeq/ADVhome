@@ -189,7 +189,8 @@ void AppController::updateHAConnecting() {
     }
 
     if (!_haManager) {
-        _haManager = new HomeAssistantManager(_config);
+        _haManager = new HomeAssistantManager(_config, _entityManager);
+        _haManager->fetchInitialStates();
         _haManager->begin();
     }
     
@@ -213,6 +214,70 @@ void AppController::updateHAConnected() {
     if (_haManager && !_haManager->isConnected()) {
         _currentState = AppState::HA_CONNECTING;
         return;
+    }
+    
+    if (!_diagView) {
+        _diagView = new DiagnosticView(_wifi, *_haManager);
+        
+        auto onSelect = [this](String entityId) {
+            _detailView->setEntityId(entityId);
+            _isDetailViewActive = true;
+            _redraw = true;
+        };
+        
+        _entitiesView = new EntitiesView(_entityManager, _config, onSelect);
+        _favoritesView = new FavoritesView(_entityManager, _config, onSelect);
+        _configView = new ConfigView(_config);
+        
+        auto onBack = [this]() {
+            _isDetailViewActive = false;
+            _redraw = true;
+        };
+        
+        auto onCallService = [this](String domain, String service) {
+            _haManager->callService(domain, service, _detailView->getEntityId());
+        };
+        
+        _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService);
+        
+        _tabController.addView(_favoritesView, "Favs");
+        _tabController.addView(_entitiesView, "Entities");
+        _tabController.addView(_configView, "Config");
+        _tabController.addView(_diagView, "Diag");
+    }
+    
+    bool wasDetailActive = _isDetailViewActive;
+    
+    static uint32_t lastMarquee = 0;
+    if (millis() - lastMarquee > 250) {
+        lastMarquee = millis();
+        _redraw = true;
+    }
+    
+    if (wasDetailActive) {
+        if (_detailView->handleInput(_keyboard)) {
+            _redraw = true;
+        }
+    } else {
+        _tabController.update(_keyboard, _display, _redraw, _config.getShowBattery());
+        // We only clear _redraw if we stayed in tab view. 
+        // If an input caused us to switch to detail view, we leave _redraw = true.
+        if (!_isDetailViewActive) {
+            _redraw = false;
+        }
+    }
+    
+    // Draw Detail View if active and needs redraw
+    if (_isDetailViewActive) {
+        if (_redraw) {
+            _display.clear();
+            _detailView->draw(_display);
+            _display.push();
+            _redraw = false;
+        }
+    } else if (wasDetailActive) {
+        // We just exited detail view. Force a redraw of tabs on the NEXT frame.
+        _redraw = true;
     }
 }
 
@@ -262,9 +327,7 @@ void AppController::drawCurrentState() {
         }
             
         case AppState::HA_CONNECTED:
-            if (_redraw) {
-                _display.drawDiagPage(_wifi.getIPAddress(), _config.getHAUrl(), _haManager->getVersion());
-            }
+            // Handled by TabController inside updateHAConnected()
             break;
     }
 }
