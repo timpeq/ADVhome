@@ -73,12 +73,12 @@ void FavoritesView::draw(DisplayManager& display) {
         String displayState = entity.domain == "scene" ? "Scene" : entity.state;
 
         // State on the right
-        canvas->setCursor(180, y + (i * 15));
+        canvas->setCursor(165, y + (i * 15));
         if (entity.state == "on") canvas->setTextColor(TFT_GREEN);
         else if (entity.state == "off") canvas->setTextColor(TFT_RED);
         else canvas->setTextColor(TFT_CYAN);
         
-        canvas->print(displayState);
+        canvas->print(TextScroller::visible(displayState, 12, false));
     }
 }
 
