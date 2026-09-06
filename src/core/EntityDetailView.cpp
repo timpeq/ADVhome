@@ -30,17 +30,23 @@ void EntityDetailView::draw(DisplayManager& display) {
     
     canvas->setCursor(4, 38);
     canvas->setTextColor(TFT_WHITE);
-    canvas->print("State: ");
-    
-    if (entity.state == "on" || entity.state == "unlocked" || entity.state == "open" || entity.state == "playing") {
-        canvas->setTextColor(TFT_GREEN);
-    } else if (entity.state == "off" || entity.state == "locked" || entity.state == "closed" || entity.state == "paused" || entity.state == "idle") {
-        canvas->setTextColor(TFT_RED);
-    } else {
+    if (entity.domain == "scene") {
+        canvas->print("Last run: ");
         canvas->setTextColor(TFT_YELLOW);
-    }
+        canvas->println(TextScroller::visible(entity.state, 28));
+    } else {
+        canvas->print("State: ");
     
-    canvas->println(entity.state);
+        if (entity.state == "on" || entity.state == "unlocked" || entity.state == "open" || entity.state == "playing") {
+            canvas->setTextColor(TFT_GREEN);
+        } else if (entity.state == "off" || entity.state == "locked" || entity.state == "closed" || entity.state == "paused" || entity.state == "idle") {
+            canvas->setTextColor(TFT_RED);
+        } else {
+            canvas->setTextColor(TFT_YELLOW);
+        }
+    
+        canvas->println(entity.state);
+    }
     
     // Instructions
     // Instructions / media info

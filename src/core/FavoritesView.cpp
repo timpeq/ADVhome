@@ -69,13 +69,16 @@ void FavoritesView::draw(DisplayManager& display) {
         String dispName = TextScroller::visible(entity.friendlyName, 20, idx == _selectedIndex);
         canvas->print(dispName);
         
+        // Scenes store their last-activated timestamp as state; keep the list compact.
+        String displayState = entity.domain == "scene" ? "Scene" : entity.state;
+
         // State on the right
         canvas->setCursor(180, y + (i * 15));
         if (entity.state == "on") canvas->setTextColor(TFT_GREEN);
         else if (entity.state == "off") canvas->setTextColor(TFT_RED);
         else canvas->setTextColor(TFT_CYAN);
         
-        canvas->print(entity.state);
+        canvas->print(displayState);
     }
 }
 
