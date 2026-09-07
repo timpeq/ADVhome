@@ -241,8 +241,12 @@ void AppController::updateHAConnected() {
         auto onSetVolume = [this](String entityId, float volume) {
             _haManager->setMediaVolume(entityId, volume);
         };
+
+        auto onSecureService = [this](String domain, String service, String entityId, String code) {
+            _haManager->callSecureService(domain, service, entityId, code);
+        };
         
-        _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume);
+        _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSecureService);
         
         _tabController.addView(_homeView, "Home");
         _tabController.addView(_entitiesView, "Entities");

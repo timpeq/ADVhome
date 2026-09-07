@@ -7,6 +7,7 @@ void EntityManager::clear() {
 
 bool EntityManager::isSupportedDomain(const String& domain) const {
     return domain == "light" || 
+           domain == "alarm_control_panel" ||
            domain == "climate" || 
            domain == "switch" || 
            domain == "cover" || 

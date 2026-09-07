@@ -16,7 +16,7 @@
 ## Feature Requests
 
 - [x] Use Up/Down arrows for volume control on the media detail page.
-- [ ] Create a code request to allow cover, lock, and alarm control.
+- [x] Create a code request to allow cover, lock, and alarm control.
 - [ ] Make the device sleep and wake on a button press or gyro movement.
 - [ ] Make ESC an escalating back button, where it closes modals, then backs to the top of the view, then back to the home page, then back to the top of the home page view, and then make holding the button instantly sleep (and ignore gyro for wake up for (configurable) seconds)
 - [ ] Investigate the Cardputer speaker and microphone APIs and hardware behavior.

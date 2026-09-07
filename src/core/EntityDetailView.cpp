@@ -1,8 +1,8 @@
 #include "EntityDetailView.h"
 #include "TextScroller.h"
 
-EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, bool showEntityName)
-    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _config(config), _scrollRepeater(config), _showEntityName(showEntityName) {}
+EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, std::function<void(String, String, String, String)> onSecureService, bool showEntityName)
+    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _onSecureService(onSecureService), _config(config), _scrollRepeater(config), _showEntityName(showEntityName) {}
 
 void EntityDetailView::setEntityId(const String& id) {
     _entityId = id;
@@ -142,13 +142,31 @@ void EntityDetailView::draw(DisplayManager& display) {
             canvas->println("ENTER: Activate");
         } else if (entity.domain == "automation") {
             canvas->println("ENTER: Trigger");
+        } else if (entity.domain == "alarm_control_panel") {
+            canvas->println("ENTER: Arm/disarm");
         } else {
             canvas->println("No actions available");
         }
     }
+
+    _securityModal.draw(*canvas);
 }
 
 bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
+    if (_securityModal.isActive()) {
+        bool handled = _securityModal.handleInput(keyboard);
+        String code;
+        if (_securityModal.takeSubmittedCode(code)) {
+            Entity entity = _entityManager.getEntity(_entityId);
+            if (_onSecureService) {
+                _onSecureService(entity.domain, _pendingSecureService, entity.id, code);
+            }
+            _pendingSecureService = "";
+            handled = true;
+        }
+        return handled;
+    }
+
     bool canBack = false;
     int backStyle = _config.getBackButtonStyle();
     
@@ -218,17 +236,14 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
         if (entity.domain == "light" || entity.domain == "switch" || entity.domain == "fan" || entity.domain == "input_boolean") {
             if (_onCallService) _onCallService(entity.domain, "toggle");
         } else if (entity.domain == "cover") {
-            if (entity.state == "open") {
-                if (_onCallService) _onCallService(entity.domain, "close_cover");
-            } else {
-                if (_onCallService) _onCallService(entity.domain, "open_cover");
-            }
+            _pendingSecureService = entity.state == "open" ? "close_cover" : "open_cover";
+            _securityModal.open("Security code");
         } else if (entity.domain == "lock") {
-            if (entity.state == "locked") {
-                if (_onCallService) _onCallService(entity.domain, "unlock");
-            } else {
-                if (_onCallService) _onCallService(entity.domain, "lock");
-            }
+            _pendingSecureService = entity.state == "locked" ? "unlock" : "lock";
+            _securityModal.open("Security code");
+        } else if (entity.domain == "alarm_control_panel") {
+            _pendingSecureService = entity.state == "disarmed" ? "alarm_arm_home" : "alarm_disarm";
+            _securityModal.open("Security code");
         } else if (entity.domain == "media_player") {
             if (_onCallService) _onCallService(entity.domain, "media_play_pause");
         } else if (entity.domain == "script") {
