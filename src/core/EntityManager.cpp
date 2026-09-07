@@ -18,6 +18,7 @@ bool EntityManager::isSupportedDomain(const String& domain) const {
            domain == "automation" ||
            domain == "input_boolean" ||
            domain == "scene" ||
+           domain == "sensor" ||
            domain == "button";
 }
 

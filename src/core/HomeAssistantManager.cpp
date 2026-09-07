@@ -125,6 +125,14 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                         String entity_id = stateObj["entity_id"].as<String>();
                         String state = stateObj["state"].as<String>();
                         String friendly_name = stateObj["attributes"]["friendly_name"] | "";
+                        
+                        if (entity_id.startsWith("sensor.")) {
+                            String device_class = stateObj["attributes"]["device_class"] | "";
+                            if (device_class != "temperature" && device_class != "humidity") {
+                                continue;
+                            }
+                        }
+                        
                         _entityManager.updateEntity(entity_id, state, friendly_name);
                         if (entity_id.startsWith("media_player.")) {
                             _entityManager.updateMediaAttributes(entity_id,
@@ -144,6 +152,14 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                     String entity_id = eventData["entity_id"].as<String>();
                     String state = eventData["new_state"]["state"].as<String>();
                     String friendly_name = eventData["new_state"]["attributes"]["friendly_name"] | "";
+                    
+                    if (entity_id.startsWith("sensor.")) {
+                        String device_class = eventData["new_state"]["attributes"]["device_class"] | "";
+                        if (device_class != "temperature" && device_class != "humidity") {
+                            return; // Stop processing this event
+                        }
+                    }
+                    
                     _entityManager.updateEntity(entity_id, state, friendly_name);
                     if (entity_id.startsWith("media_player.")) {
                         JsonObject attrs = eventData["new_state"]["attributes"];
@@ -325,8 +341,18 @@ void HomeAssistantManager::fetchInitialStates() {
                                 String entity_id = doc["entity_id"].as<String>();
                                 String state = doc["state"].as<String>();
                                 String friendly_name = doc["attributes"]["friendly_name"] | "";
-                                _entityManager.updateEntity(entity_id, state, friendly_name);
-                                if (entity_id.startsWith("media_player.")) {
+                                
+                                bool skip = false;
+                                if (entity_id.startsWith("sensor.")) {
+                                    String device_class = doc["attributes"]["device_class"] | "";
+                                    if (device_class != "temperature" && device_class != "humidity") {
+                                        skip = true;
+                                    }
+                                }
+                                
+                                if (!skip) {
+                                    _entityManager.updateEntity(entity_id, state, friendly_name);
+                                    if (entity_id.startsWith("media_player.")) {
                                     _entityManager.updateMediaAttributes(entity_id,
                                         doc["attributes"]["media_title"] | "",
                                         doc["attributes"]["media_artist"] | "",
@@ -335,8 +361,9 @@ void HomeAssistantManager::fetchInitialStates() {
                                         doc["attributes"]["media_position"] | 0.0f,
                                         doc["attributes"]["volume_level"] | 0.0f,
                                         doc["attributes"]["is_volume_muted"] | false);
+                                    }
+                                    count++;
                                 }
-                                count++;
                             }
                             objStr = "";
                         }

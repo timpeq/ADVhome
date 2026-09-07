@@ -26,7 +26,7 @@ private:
     bool _subTabFocus = false;
     ScrollRepeater _scrollRepeater;
     
-    std::vector<String> _subTabs = {"Favorites", "All", "alarm_control_panel", "automation", "button", "climate", "cover", "fan", "input_boolean", "light", "lock", "media_player", "scene", "script", "switch"};
+    std::vector<String> _subTabs = {"Favorites", "All", "alarm_control_panel", "automation", "button", "climate", "cover", "fan", "input_boolean", "light", "lock", "media_player", "scene", "script", "sensor", "switch"};
     int _currentSubTab = 0;
     
     String _searchPrefix = "";
