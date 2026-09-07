@@ -5,7 +5,7 @@
 - [x] Create a code request to allow cover, lock, and alarm control.
 - [x] Fix volume debouncing and input unity in EntityDetailView.
 - [ ] Implement hold-down to fast-forward for media player.
-- [ ] Fix general time display in media player by tracking time locally instead of waiting for HA updates.
+- [x] Fix general time display in media player by tracking time locally instead of waiting for HA updates.
 - [ ] Fix the 'modal' view of the details so it doesn't change the top bar and looks like a window below the entity.
 
 ## Phase 2: Home Dashboard Completion

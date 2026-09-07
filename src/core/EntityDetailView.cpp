@@ -94,12 +94,18 @@ void EntityDetailView::draw(DisplayManager& display) {
         
         // Progress bar
         if (entity.mediaDuration > 0) {
-            float progress = entity.mediaPosition / entity.mediaDuration;
+            float currentPosition = entity.mediaPosition;
+            if (entity.state == "playing" && entity.mediaPositionUpdatedAt > 0) {
+                currentPosition += (millis() - entity.mediaPositionUpdatedAt) / 1000.0f;
+            }
+            if (currentPosition > entity.mediaDuration) currentPosition = entity.mediaDuration;
+
+            float progress = currentPosition / entity.mediaDuration;
             if (progress > 1.0f) progress = 1.0f;
             
             // Time labels
-            int posMin = (int)entity.mediaPosition / 60;
-            int posSec = (int)entity.mediaPosition % 60;
+            int posMin = (int)currentPosition / 60;
+            int posSec = (int)currentPosition % 60;
             int durMin = (int)entity.mediaDuration / 60;
             int durSec = (int)entity.mediaDuration % 60;
             

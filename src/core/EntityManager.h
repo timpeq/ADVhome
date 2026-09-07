@@ -16,6 +16,7 @@ struct Entity {
     String mediaAlbum;
     float mediaDuration = 0;
     float mediaPosition = 0;
+    uint32_t mediaPositionUpdatedAt = 0;
     float volumeLevel = 0;
     bool isVolumeMuted = false;
 };

@@ -54,6 +54,7 @@ void EntityManager::updateMediaAttributes(const String& entity_id, const String&
         it->second.mediaAlbum = album;
         it->second.mediaDuration = duration;
         it->second.mediaPosition = position;
+        it->second.mediaPositionUpdatedAt = millis();
         it->second.volumeLevel = volume;
         it->second.isVolumeMuted = muted;
     }
