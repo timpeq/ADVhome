@@ -14,6 +14,7 @@
 #include "EntitiesView.h"
 #include "HomeView.h"
 #include "EntityDetailView.h"
+#include "ChatView.h"
 #include <Arduino.h>
 
 enum class AppState {
@@ -46,6 +47,7 @@ private:
     EntitiesView* _entitiesView = nullptr;
     HomeView* _homeView = nullptr;
     ConfigView* _configView = nullptr;
+    ChatView* _chatView = nullptr;
     EntityDetailView* _detailView = nullptr;
     
     bool _isDetailViewActive = false;

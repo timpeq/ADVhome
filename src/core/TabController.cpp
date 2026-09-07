@@ -2,7 +2,16 @@
 #include "Graphics.h"
 
 void TabController::addView(View* view, const String& name) {
-    _tabs.push_back({view, name});
+    _tabs.push_back({view, name, true});
+}
+
+void TabController::setViewVisible(View* view, bool visible) {
+    for (auto& tab : _tabs) {
+        if (tab.view == view) {
+            tab.visible = visible;
+            return;
+        }
+    }
 }
 
 void TabController::update(KeyboardManager& keyboard, DisplayManager& display, bool forceRedraw, bool showBattery) {
@@ -31,18 +40,21 @@ void TabController::update(KeyboardManager& keyboard, DisplayManager& display, b
 void TabController::nextTab() {
     if (_tabs.empty()) return;
     _tabs[_currentTabIndex].view->onExit();
-    _currentTabIndex = (_currentTabIndex + 1) % _tabs.size();
+    size_t startIndex = _currentTabIndex;
+    do {
+        _currentTabIndex = (_currentTabIndex + 1) % _tabs.size();
+    } while (!_tabs[_currentTabIndex].visible && _currentTabIndex != startIndex);
     _tabs[_currentTabIndex].view->onEnter();
 }
 
 void TabController::prevTab() {
     if (_tabs.empty()) return;
     _tabs[_currentTabIndex].view->onExit();
-    if (_currentTabIndex == 0) {
-        _currentTabIndex = _tabs.size() - 1;
-    } else {
-        _currentTabIndex--;
-    }
+    size_t startIndex = _currentTabIndex;
+    do {
+        if (_currentTabIndex == 0) _currentTabIndex = _tabs.size() - 1;
+        else _currentTabIndex--;
+    } while (!_tabs[_currentTabIndex].visible && _currentTabIndex != startIndex);
     _tabs[_currentTabIndex].view->onEnter();
 }
 
@@ -57,12 +69,18 @@ void TabController::drawTabBar(DisplayManager& display, bool showBattery) {
     
     if (_tabs.size() == 0) return;
     
+    size_t visibleCount = 0;
+    for (const auto& tab : _tabs) if (tab.visible) visibleCount++;
+    if (visibleCount == 0) return;
+
     int tabAreaWidth = showBattery ? 200 : 240;
-    int tabWidth = tabAreaWidth / _tabs.size();
+    int tabWidth = tabAreaWidth / visibleCount;
+    size_t visibleIndex = 0;
     
     for (size_t i = 0; i < _tabs.size(); i++) {
+        if (!_tabs[i].visible) continue;
         if (i == (size_t)_currentTabIndex) {
-            canvas->fillRect(i * tabWidth, 0, tabWidth, 16, TFT_BLUE);
+            canvas->fillRect(visibleIndex * tabWidth, 0, tabWidth, 16, TFT_BLUE);
             canvas->setTextColor(TFT_WHITE);
         } else {
             canvas->setTextColor(TFT_LIGHTGREY);
@@ -70,13 +88,14 @@ void TabController::drawTabBar(DisplayManager& display, bool showBattery) {
         canvas->setTextSize(1);
         
         if (_tabs[i].name == "Home") {
-            Graphics::drawHomeIcon(*canvas, (i * tabWidth) + (tabWidth / 2), 8, TFT_WHITE);
+            Graphics::drawHomeIcon(*canvas, (visibleIndex * tabWidth) + (tabWidth / 2), 8, TFT_WHITE);
         } else {
             // Center text roughly
-            int textX = (i * tabWidth) + (tabWidth / 2) - (_tabs[i].name.length() * 3);
+            int textX = (visibleIndex * tabWidth) + (tabWidth / 2) - (_tabs[i].name.length() * 3);
             canvas->setCursor(textX, 4);
             canvas->print(_tabs[i].name);
         }
+        visibleIndex++;
     }
     
     if (showBattery) {

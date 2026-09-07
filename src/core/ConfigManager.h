@@ -15,7 +15,7 @@ public:
     String getWifiSSID();
     String getWifiPassword();
     void saveWifiConfig(const String& ssid, const String& password);
-    bool getEscDeepSleep() const;
+    bool getEscDeepSleep();
     void setEscDeepSleep(bool enable);
 
     void clearWifiConfig();
@@ -41,6 +41,9 @@ public:
     
     bool getHideUnavailable();
     void setHideUnavailable(bool hide);
+
+    bool getShowChat();
+    void setShowChat(bool show);
     
     int getDisplayBrightness();
     void setDisplayBrightness(int brightness);

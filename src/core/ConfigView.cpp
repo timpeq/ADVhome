@@ -1,9 +1,10 @@
 #include "ConfigView.h"
 
-ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView)
-    : _config(config), _diagnosticView(diagnosticView), _scrollRepeater(config) {
+ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, std::function<void()> onSettingsChanged)
+    : _config(config), _diagnosticView(diagnosticView), _onSettingsChanged(onSettingsChanged), _scrollRepeater(config) {
     _settings.push_back({"Battery % in Tab Bar", 0});
     _settings.push_back({"Hide Unavailable on Home", 9});
+    _settings.push_back({"Show Chat Tab", 16});
     _settings.push_back({"Favorites Sort", 2});
     _settings.push_back({"Reconnect Interval", 1});
     _settings.push_back({"Scroll Start Delay", 5});
@@ -28,6 +29,7 @@ void ConfigView::refreshValues() {
     _seekStepMax = _config.getSeekStepMax();
     _favoritesSort = _config.getFavoritesSort();
     _hideUnavailable = _config.getHideUnavailable();
+    _showChat = _config.getShowChat();
     _brightness = _config.getDisplayBrightness();
     _dimTO = _config.getDimTimeout();
     _dispOffTO = _config.getDisplayOffTimeout();
@@ -77,6 +79,9 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 9) {
             canvas->print(_hideUnavailable ? "YES" : "NO");
             canvas->setTextColor(_hideUnavailable ? TFT_GREEN : TFT_LIGHTGREY);
+        } else if (_settings[i].type == 16) {
+            canvas->print(_showChat ? "YES" : "NO");
+            canvas->setTextColor(_showChat ? TFT_GREEN : TFT_LIGHTGREY);
         } else if (_settings[i].type == 2) {
             canvas->print(_favoritesSort == 0 ? "ORDER" : "NAME");
             canvas->setTextColor(TFT_CYAN);
@@ -155,6 +160,10 @@ void ConfigView::toggleCurrent() {
     } else if (_settings[_selectedIndex].type == 9) {
         _hideUnavailable = !_hideUnavailable;
         _config.setHideUnavailable(_hideUnavailable);
+    } else if (_settings[_selectedIndex].type == 16) {
+        _showChat = !_showChat;
+        _config.setShowChat(_showChat);
+        if (_onSettingsChanged) _onSettingsChanged();
     } else if (_settings[_selectedIndex].type == 10) {
         _brightness += 25;
         if (_brightness > 255) _brightness = 25;

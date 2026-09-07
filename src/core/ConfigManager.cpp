@@ -23,17 +23,12 @@ void ConfigManager::saveWifiConfig(const String& ssid, const String& password) {
     _prefs.putString("wifi_pass", password);
 }
 
-bool ConfigManager::getEscDeepSleep() const {
-    _prefs.begin("advhome", true);
-    bool enable = _prefs.getBool("esc_dpsleep", false);
-    _prefs.end();
-    return enable;
+bool ConfigManager::getEscDeepSleep() {
+    return _prefs.getBool("esc_dpsleep", false);
 }
 
 void ConfigManager::setEscDeepSleep(bool enable) {
-    _prefs.begin("advhome", false);
     _prefs.putBool("esc_dpsleep", enable);
-    _prefs.end();
 }
 
 void ConfigManager::clearWifiConfig() {
@@ -132,6 +127,14 @@ bool ConfigManager::getHideUnavailable() {
 
 void ConfigManager::setHideUnavailable(bool hide) {
     _prefs.putBool("hideUnavail", hide);
+}
+
+bool ConfigManager::getShowChat() {
+    return _prefs.getBool("show_chat", true);
+}
+
+void ConfigManager::setShowChat(bool show) {
+    _prefs.putBool("show_chat", show);
 }
 
 int ConfigManager::getDisplayBrightness() {

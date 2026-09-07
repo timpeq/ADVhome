@@ -11,6 +11,7 @@ ADVhome is an M5Stack Cardputer firmware for monitoring and controlling Home Ass
 - Favorites, entity browsing, and entity detail views
 - Service controls for supported entities
 - Media player information and controls
+- Text chat with the Home Assistant conversation agent
 - Connection diagnostics, including device IP and Home Assistant version
 - Persistent Wi-Fi, Home Assistant, favorites, and UI settings in ESP32 Preferences
 
@@ -108,7 +109,32 @@ Create the long-lived access token in Home Assistant from your user profile page
 - `A` / `D`, or Left / Right: navigate horizontally according to the configured scroll style
 - `Tab`: switch between interface sections where supported
 
-The Config view exposes UI options such as battery visibility, reconnect interval, back-button behavior, and scroll behavior.
+The Chat tab sends text through Home Assistant's authenticated WebSocket
+`conversation/process` command and keeps the returned conversation ID for
+follow-up messages. This is a text-first path and does not require audio
+processing on the Cardputer.
+
+### Voice roadmap
+
+The Cardputer hardware includes a microphone and speaker, so push-to-talk voice
+interaction is feasible, but it is a separate project from text chat. The
+firmware would need to capture and buffer microphone audio, negotiate an Assist
+pipeline session with Home Assistant, stream audio in the format that pipeline
+expects, decode the returned audio, and handle speaker timing. The existing
+authenticated WebSocket is the likely control and event transport, but voice
+audio should not be assumed to be identical to the JSON entity messages; the
+Assist pipeline's audio framing and session lifecycle need to be verified.
+
+Estimated effort: microphone capture and a push-to-talk UI are medium effort
+(about 1-2 weeks); end-to-end Assist pipeline streaming and playback are high
+effort (about 2-4 additional weeks), mainly because of audio buffering,
+encoding/decoding, and limited RAM. A text Chat fallback should remain even
+after voice support is added.
+
+The Config view exposes UI options such as battery visibility, Chat tab visibility,
+reconnect interval, back-button behavior, and scroll behavior. Chat is enabled by
+default and can be hidden without disabling the rest of the Home Assistant
+connection or entity controls.
 
 ## Project layout
 

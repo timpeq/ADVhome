@@ -9,7 +9,7 @@
 - [x] Add heap memory, WiFi RSSI, and build date tracking to Diagnostic View.
 - [x] Fix general time display in media player by tracking time locally instead of waiting for HA updates.
 - [x] Fix the 'modal' view of the details so it doesn't change the top bar and looks like a window below the entity.
-- [ ] Allow navigating directly to adjacent entities (next/previous) using the TAB key while the Entity Detail modal is open.
+- [ ] Add cursor-based navigation from list boundaries into the top-level tabs.
 - [ ] Enhance the climate/thermostat widget in the Entity Detail View to cleanly display both the current ambient temperature and the target set temperature.
 
 ## Phase 2: Home Dashboard Completion
@@ -22,12 +22,17 @@
 - [ ] Decide whether Favorites should remain duplicated in Entities or be removed once Home is stable.
 - [ ] Add a Home visual treatment using a small bitmap or an appropriate Home Assistant mark.
 - [ ] Keep the battery indicator and connection state available to Home widgets.
+- [x] Add a Chat top-level tab using Home Assistant's text conversation WebSocket API.
+- [x] Make the Chat tab optional for users who do not want to use Home Assistant agents.
 
 ## Phase 3: Hardware Integration
 - [ ] Make the device sleep and wake on a button press or gyro movement.
 - [ ] Make ESC an escalating back button (close modals -> top of view -> home page -> top of home -> sleep).
 - [ ] Add short hardware notes covering speaker, microphone, gyro, sleep, and wake capabilities.
 - [ ] Investigate Cardputer speaker and microphone APIs.
+- [ ] Add push-to-talk microphone capture for Assist conversations (medium effort, about 1-2 weeks).
+- [ ] Verify and implement Assist pipeline audio session/framing over the authenticated WebSocket (high effort, about 2-4 weeks).
+- [ ] Decode Assist audio responses and play them through the Cardputer speaker, with text fallback (high effort, about 1-2 weeks after transport).
 
 ## Phase 4: Polish & Stability
 - [x] Move the remaining entity categories into the Entities top-level tab as sub-tabs.

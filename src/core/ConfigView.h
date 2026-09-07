@@ -6,10 +6,11 @@
 #include "DiagnosticView.h"
 #include "ScrollRepeater.h"
 #include <vector>
+#include <functional>
 
 class ConfigView : public View {
 public:
-    ConfigView(ConfigManager& config, DiagnosticView& diagnosticView);
+    ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, std::function<void()> onSettingsChanged = nullptr);
     
     void onEnter() override;
     void draw(DisplayManager& display) override;
@@ -18,6 +19,7 @@ public:
 private:
     ConfigManager& _config;
     DiagnosticView& _diagnosticView;
+    std::function<void()> _onSettingsChanged;
     
     struct Setting {
         String name;
@@ -31,6 +33,7 @@ private:
     // Temporary variables for drawing
     bool _showBattery;
     bool _hideUnavailable;
+    bool _showChat;
     bool _showDiagnostics = false;
     int _reconInt;
     int _scrollDelay;

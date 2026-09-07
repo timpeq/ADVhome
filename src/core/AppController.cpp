@@ -238,7 +238,15 @@ void AppController::updateHAConnected() {
         
         _entitiesView = new EntitiesView(_entityManager, _config, onSelect, onToggle, onAdjust);
         _homeView = new HomeView(_entityManager, _config, onSelect, onToggle, onAdjust);
-        _configView = new ConfigView(_config, *_diagView);
+        _configView = new ConfigView(_config, *_diagView, [this]() {
+            _tabController.setViewVisible(_chatView, _config.getShowChat());
+            _redraw = true;
+        });
+        _chatView = new ChatView(*_haManager);
+        _haManager->setConversationCallback([this](const String& response) {
+            _chatView->receiveResponse(response);
+            _redraw = true;
+        });
         
         auto onBack = [this]() {
             _isDetailViewActive = false;
@@ -270,6 +278,8 @@ void AppController::updateHAConnected() {
         _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSeekMedia, onSecureService);
         
         _tabController.addView(_homeView, "Home");
+        _tabController.addView(_chatView, "Chat");
+        _tabController.setViewVisible(_chatView, _config.getShowChat());
         _tabController.addView(_entitiesView, "Entities");
         _tabController.addView(_configView, "Config");
     }
@@ -434,10 +444,38 @@ void AppController::checkPowerManagement() {
     }
     
     if (forceDeepSleep || idleTime >= (uint32_t)_config.getDeepSleepTimeout()) {
+        // Wait for all keys to be released before sleeping to prevent immediate wakeup
+        while (M5Cardputer.Keyboard.isPressed()) {
+            M5Cardputer.update();
+            delay(10);
+        }
+
         // Deep sleep - CPU halts until keypress
         WiFi.disconnect(true);
         M5.Display.setBrightness(0);
         delay(100);
+
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+        if (M5.getBoard() == m5::board_t::board_M5CardputerADV) {
+            // Setup Cardputer ADV wakeup (TCA8418 INT pin)
+            pinMode(11, INPUT_PULLUP);
+            gpio_wakeup_enable((gpio_num_t)11, GPIO_INTR_LOW_LEVEL);
+        } else {
+            // Setup standard Cardputer matrix wakeup
+            const int input_list[] = {13, 15, 3, 4, 5, 6, 7};
+            const int output_list[] = {8, 9, 11};
+            for (int i = 0; i < 3; i++) {
+                pinMode(output_list[i], OUTPUT);
+                digitalWrite(output_list[i], LOW);
+            }
+            for (int i = 0; i < 7; i++) {
+                pinMode(input_list[i], INPUT_PULLUP);
+                gpio_wakeup_enable((gpio_num_t)input_list[i], GPIO_INTR_LOW_LEVEL);
+            }
+        }
+        esp_sleep_enable_gpio_wakeup();
+#endif
+
         M5.Power.lightSleep(M5.Power.sleep_no_timer, true); // true = wake from wakeup pin
         // On wake:
         _lastActivityTime = millis();

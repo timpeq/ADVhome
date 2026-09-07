@@ -88,11 +88,19 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
             filter["event"]["data"]["new_state"]["attributes"]["volume_level"] = true;
             filter["event"]["data"]["new_state"]["attributes"]["is_volume_muted"] = true;
 
+            filter["error"]["message"] = true;
+
             JsonDocument doc;
             DeserializationError error = deserializeJson(doc, payload, DeserializationOption::Filter(filter));
             
             if (!error) {
                 String msgType = doc["type"] | "";
+
+                JsonDocument conversationDoc;
+                bool isConversationResponse = msgType == "result" && doc["id"] == _conversationRequestId;
+                if (isConversationResponse) {
+                    deserializeJson(conversationDoc, payload, length);
+                }
                 
                 if (msgType == "auth_required") {
                     Serial.println("[HA] Auth required, sending token...");
@@ -118,6 +126,18 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                     Serial.println("[HA] Auth Invalid! Clearing config...");
                     _config.clearHAConfig();
                     _ws.disconnect();
+                }
+                else if (msgType == "result" && doc["id"] == _conversationRequestId) {
+                    JsonObject result = conversationDoc["result"].as<JsonObject>();
+                    if (doc["success"] && !result["response"]["speech"]["plain"]["speech"].isNull()) {
+                        _conversationId = result["conversation_id"] | _conversationId;
+                        if (_conversationCallback) {
+                            _conversationCallback(result["response"]["speech"]["plain"]["speech"].as<String>());
+                        }
+                    } else if (_conversationCallback) {
+                        String errorMessage = doc["error"]["message"] | "Conversation request failed";
+                        _conversationCallback("Error: " + errorMessage);
+                    }
                 }
                 else if (msgType == "result" && doc["id"] == 1 && doc["success"]) {
                     JsonArray result = doc["result"].as<JsonArray>();
@@ -188,6 +208,27 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
         case WStype_PONG:
             break;
     }
+}
+
+void HomeAssistantManager::sendConversation(const String& text) {
+    if (text.isEmpty()) return;
+    if (!_isConnected || !_isAuthenticated) {
+        if (_conversationCallback) _conversationCallback("Error: Home Assistant is not connected");
+        return;
+    }
+
+    JsonDocument doc;
+    _conversationRequestId = _nextMsgId++;
+    doc["id"] = _conversationRequestId;
+    doc["type"] = "conversation/process";
+    doc["text"] = text;
+    doc["language"] = "en";
+    if (!_conversationId.isEmpty()) doc["conversation_id"] = _conversationId;
+
+    String payload;
+    serializeJson(doc, payload);
+    _ws.sendTXT(payload);
+    Serial.println("[HA] Sent conversation/process");
 }
 
 void HomeAssistantManager::callService(const String& domain, const String& service, const String& entity_id) {

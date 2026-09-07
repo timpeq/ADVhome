@@ -7,6 +7,7 @@
 class TabController {
 public:
     void addView(View* view, const String& name);
+    void setViewVisible(View* view, bool visible);
     
     void update(KeyboardManager& keyboard, DisplayManager& display, bool forceRedraw = false, bool showBattery = false);
     
@@ -19,6 +20,7 @@ private:
     struct TabInfo {
         View* view;
         String name;
+        bool visible;
     };
     
     std::vector<TabInfo> _tabs;
