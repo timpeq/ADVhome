@@ -112,14 +112,6 @@ void ConfigManager::setReconnectInterval(int ms) {
     _prefs.putInt("recon_int", ms);
 }
 
-int ConfigManager::getBackButtonStyle() {
-    return _prefs.getInt("back_btn_sty", 0);
-}
-
-void ConfigManager::setBackButtonStyle(int style) {
-    _prefs.putInt("back_btn_sty", style);
-}
-
 int ConfigManager::getScrollStyle() {
     return _prefs.getInt("scroll_sty", 0);
 }

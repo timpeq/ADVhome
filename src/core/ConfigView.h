@@ -31,7 +31,6 @@ private:
     bool _showBattery;
     bool _showDiagnostics = false;
     int _reconInt;
-    int _backStyle;
     int _scrollDelay;
     int _scrollSpeed;
     ScrollRepeater _scrollRepeater;

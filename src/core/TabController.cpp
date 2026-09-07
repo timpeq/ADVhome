@@ -1,4 +1,5 @@
 #include "TabController.h"
+#include "Graphics.h"
 
 void TabController::addView(View* view, const String& name) {
     _tabs.push_back({view, name});
@@ -63,10 +64,14 @@ void TabController::drawTabBar(DisplayManager& display, bool showBattery) {
         }
         canvas->setTextSize(1);
         
-        // Center text roughly
-        int textX = (i * tabWidth) + (tabWidth / 2) - (_tabs[i].name.length() * 3);
-        canvas->setCursor(textX, 4);
-        canvas->print(_tabs[i].name);
+        if (_tabs[i].name == "Home") {
+            Graphics::drawHomeIcon(*canvas, (i * tabWidth) + (tabWidth / 2), 8, TFT_WHITE);
+        } else {
+            // Center text roughly
+            int textX = (i * tabWidth) + (tabWidth / 2) - (_tabs[i].name.length() * 3);
+            canvas->setCursor(textX, 4);
+            canvas->print(_tabs[i].name);
+        }
     }
     
     if (showBattery) {

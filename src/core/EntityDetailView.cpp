@@ -1,5 +1,6 @@
 #include "EntityDetailView.h"
 #include "TextScroller.h"
+#include "Graphics.h"
 
 EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, std::function<void(String, String, String, String)> onSecureService, bool showEntityName)
     : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _onSecureService(onSecureService), _config(config), _scrollRepeater(config), _showEntityName(showEntityName) {}
@@ -46,6 +47,16 @@ void EntityDetailView::draw(DisplayManager& display) {
     
         canvas->println(entity.state);
     }
+
+    if (entity.domain == "light") {
+        Graphics::drawLightIcon(*canvas, 218, 42, entity.state == "on", entity.state == "on" ? TFT_YELLOW : TFT_LIGHTGREY);
+    } else if (entity.domain == "switch") {
+        Graphics::drawToggle(*canvas, 218, 42, entity.state == "on", entity.state == "on" ? TFT_GREEN : TFT_LIGHTGREY);
+    } else if (entity.domain == "alarm_control_panel") {
+        Graphics::drawAlarmIcon(*canvas, 218, 42, entity.state != "disarmed", entity.state != "disarmed" ? TFT_RED : TFT_LIGHTGREY);
+    } else if (entity.domain == "media_player") {
+        Graphics::drawPlaybackIcon(*canvas, 218, 42, entity.state, entity.state == "playing" ? TFT_GREEN : TFT_LIGHTGREY);
+    }
     
     // Instructions
     // Instructions / media info
@@ -54,7 +65,7 @@ void EntityDetailView::draw(DisplayManager& display) {
     if (entity.domain == "media_player") {
         // Keep the footer clear while giving the track title more visual weight.
         int infoY = 54;
-        
+
         bool showMediaTitle = !entity.mediaTitle.isEmpty() &&
             (!_showEntityName || !entity.mediaTitle.equalsIgnoreCase(entity.friendlyName));
         if (showMediaTitle) {
@@ -96,6 +107,8 @@ void EntityDetailView::draw(DisplayManager& display) {
             char timeBuf[20];
             snprintf(timeBuf, sizeof(timeBuf), "%d:%02d / %d:%02d", posMin, posSec, durMin, durSec);
             canvas->print(timeBuf);
+
+            Graphics::drawMusicIcon(*canvas, 215, infoY + 7, TFT_CYAN);
             
             infoY += 10;
             // Bar background
@@ -104,6 +117,8 @@ void EntityDetailView::draw(DisplayManager& display) {
             int fillWidth = (int)(180.0f * progress);
             canvas->fillRect(10, infoY, fillWidth, 5, TFT_CYAN);
             infoY += 8;
+        } else {
+            Graphics::drawMusicIcon(*canvas, 215, infoY + 7, TFT_CYAN);
         }
         
         // Volume
@@ -167,23 +182,27 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
         return handled;
     }
 
-    bool canBack = false;
-    int backStyle = _config.getBackButtonStyle();
-    
-    if (backStyle == 0) {
-        canBack = keyboard.wasBackspacePressed() || keyboard.wasLeftPressed();
-    } else if (backStyle == 1) {
-        canBack = keyboard.wasLeftPressed();
-    } else if (backStyle == 2) {
-        canBack = keyboard.wasBackspacePressed();
+    Entity entity = _entityManager.getEntity(_entityId);
+
+    if (entity.domain == "media_player") {
+        if (keyboard.wasLeftPressed()) {
+            if (_onCallService) _onCallService(entity.domain, "media_previous_track");
+            return true;
+        }
+        if (keyboard.wasRightPressed()) {
+            if (_onCallService) _onCallService(entity.domain, "media_next_track");
+            return true;
+        }
+        if (keyboard.wasEnterPressed()) {
+            if (_onCallService) _onCallService(entity.domain, "media_play_pause");
+            return true;
+        }
     }
-    
-    if (canBack) {
+
+    if (keyboard.wasBackspacePressed()) {
         if (_onBack) _onBack();
         return true;
     }
-    
-    Entity entity = _entityManager.getEntity(_entityId);
 
     auto changeVolume = [&](float delta) {
         if (_onSetVolume) {
@@ -220,18 +239,6 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
         }
     }
 
-    // Media player prev/next with arrow keys (only when back style doesn't use left)
-    if (entity.domain == "media_player") {
-        if (keyboard.wasLeftPressed()) {
-            if (_onCallService) _onCallService(entity.domain, "media_previous_track");
-            return true;
-        }
-        if (keyboard.wasRightPressed()) {
-            if (_onCallService) _onCallService(entity.domain, "media_next_track");
-            return true;
-        }
-    }
-    
     if (keyboard.wasEnterPressed()) {
         if (entity.domain == "light" || entity.domain == "switch" || entity.domain == "fan" || entity.domain == "input_boolean") {
             if (_onCallService) _onCallService(entity.domain, "toggle");
@@ -244,8 +251,6 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
         } else if (entity.domain == "alarm_control_panel") {
             _pendingSecureService = entity.state == "disarmed" ? "alarm_arm_home" : "alarm_disarm";
             _securityModal.open("Security code");
-        } else if (entity.domain == "media_player") {
-            if (_onCallService) _onCallService(entity.domain, "media_play_pause");
         } else if (entity.domain == "script") {
             if (_onCallService) _onCallService(entity.domain, "turn_on");
         } else if (entity.domain == "button") {

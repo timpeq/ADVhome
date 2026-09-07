@@ -30,4 +30,5 @@
 - [ ] Keep the battery indicator and connection state available to Home widgets.
 - [ ] Add a reset or reconfiguration action for Wi-Fi and Home Assistant credentials.
 - [ ] Add a short hardware notes section covering the speaker, microphone, gyro, sleep, and wake capabilities.
+- [ ] Add optional authenticated Home Assistant album-art thumbnails using a bounded JPEG cache; keep the native music icon as the fallback.
 - [ ] Keep generated PlatformIO build output out of future feature commits unless a release artifact is intentionally required.

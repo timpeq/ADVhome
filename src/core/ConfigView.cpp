@@ -4,7 +4,6 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView)
     : _config(config), _diagnosticView(diagnosticView), _scrollRepeater(config) {
     _settings.push_back({"Battery % in Tab Bar", 0});
     _settings.push_back({"Reconnect Interval", 1});
-    _settings.push_back({"Back Button", 2});
     _settings.push_back({"Scroll Start Delay", 5});
     _settings.push_back({"Scroll Repeat", 6});
     _settings.push_back({"Diagnostics", 4});
@@ -13,7 +12,6 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView)
 void ConfigView::refreshValues() {
     _showBattery = _config.getShowBattery();
     _reconInt = _config.getReconnectInterval();
-    _backStyle = _config.getBackButtonStyle();
     _scrollDelay = _config.getScrollDelay();
     _scrollSpeed = _config.getScrollSpeed();
 }
@@ -53,11 +51,6 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 1) {
             canvas->print(String(_reconInt / 1000) + " sec");
             canvas->setTextColor(TFT_CYAN);
-        } else if (_settings[i].type == 2) {
-            if (_backStyle == 0) canvas->print("Both");
-            else if (_backStyle == 1) canvas->print("<- Arrow");
-            else if (_backStyle == 2) canvas->print("ESC / `");
-            canvas->setTextColor(TFT_YELLOW);
         } else if (_settings[i].type == 5) {
             canvas->print(String(_scrollDelay) + " ms");
             canvas->setTextColor(TFT_YELLOW);
@@ -78,10 +71,6 @@ void ConfigView::toggleCurrent() {
         _reconInt += 1000;
         if (_reconInt > 30000) _reconInt = 1000;
         _config.setReconnectInterval(_reconInt);
-    } else if (_settings[_selectedIndex].type == 2) {
-        _backStyle++;
-        if (_backStyle > 2) _backStyle = 0;
-        _config.setBackButtonStyle(_backStyle);
     } else if (_settings[_selectedIndex].type == 5) {
         _scrollDelay += 100;
         if (_scrollDelay > 1000) _scrollDelay = 200;
@@ -97,7 +86,7 @@ bool ConfigView::handleInput(KeyboardManager& keyboard) {
     bool handled = false;
 
     if (_showDiagnostics) {
-        if (keyboard.wasBackspacePressed() || keyboard.wasLeftPressed()) {
+        if (keyboard.wasBackspacePressed()) {
             _showDiagnostics = false;
             refreshValues();
             handled = true;
