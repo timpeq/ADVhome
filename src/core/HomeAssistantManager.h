@@ -32,6 +32,7 @@ private:
     bool _isConnected = false;
     bool _isAuthenticated = false;
     String _haVersion = "Unknown";
+    uint32_t _nextMsgId = 100;
     
     void webSocketEvent(WStype_t type, uint8_t * payload, size_t length);
 };

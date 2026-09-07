@@ -177,10 +177,8 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
 void HomeAssistantManager::callService(const String& domain, const String& service, const String& entity_id) {
     if (!_isConnected || !_isAuthenticated) return;
     
-    static int nextId = 100;
-    
     JsonDocument doc;
-    doc["id"] = nextId++;
+    doc["id"] = _nextMsgId++;
     doc["type"] = "call_service";
     doc["domain"] = domain;
     doc["service"] = service;
@@ -198,11 +196,10 @@ void HomeAssistantManager::callService(const String& domain, const String& servi
 void HomeAssistantManager::setMediaVolume(const String& entity_id, float volume) {
     if (!_isConnected || !_isAuthenticated) return;
 
-    static int nextId = 1000;
     volume = constrain(volume, 0.0f, 1.0f);
 
     JsonDocument doc;
-    doc["id"] = nextId++;
+    doc["id"] = _nextMsgId++;
     doc["type"] = "call_service";
     doc["domain"] = "media_player";
     doc["service"] = "volume_set";
@@ -220,9 +217,8 @@ void HomeAssistantManager::setMediaVolume(const String& entity_id, float volume)
 void HomeAssistantManager::callSecureService(const String& domain, const String& service, const String& entity_id, const String& code) {
     if (!_isConnected || !_isAuthenticated) return;
 
-    static int nextId = 2000;
     JsonDocument doc;
-    doc["id"] = nextId++;
+    doc["id"] = _nextMsgId++;
     doc["type"] = "call_service";
     doc["domain"] = domain;
     doc["service"] = service;
