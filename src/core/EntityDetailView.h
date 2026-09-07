@@ -29,6 +29,7 @@ private:
     bool _showEntityName;
     SecurityCodeModal _securityModal;
     String _pendingSecureService;
+    bool _playPauseKeyHeld = false;
     
     String _entityId;
 };

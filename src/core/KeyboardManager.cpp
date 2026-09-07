@@ -79,3 +79,11 @@ bool KeyboardManager::isDownHeld() const {
     return _currentStatus.down ||
            std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '.') != _currentStatus.word.end();
 }
+
+bool KeyboardManager::isEnterHeld() const {
+    return _currentStatus.enter || _currentStatus.space;
+}
+
+bool KeyboardManager::isCharHeld(char character) const {
+    return std::find(_currentStatus.word.begin(), _currentStatus.word.end(), character) != _currentStatus.word.end();
+}

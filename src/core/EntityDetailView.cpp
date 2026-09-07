@@ -7,6 +7,8 @@ EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& 
 
 void EntityDetailView::setEntityId(const String& id) {
     _entityId = id;
+    // Do not reuse the Enter press that selected this entity as play/pause.
+    _playPauseKeyHeld = true;
 }
 
 void EntityDetailView::draw(DisplayManager& display) {
@@ -193,10 +195,14 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
             if (_onCallService) _onCallService(entity.domain, "media_next_track");
             return true;
         }
-        if (keyboard.wasEnterPressed()) {
+
+        bool playPauseHeld = keyboard.isEnterHeld() || keyboard.isCharHeld('p') || keyboard.isCharHeld('P');
+        if (playPauseHeld && !_playPauseKeyHeld) {
             if (_onCallService) _onCallService(entity.domain, "media_play_pause");
+            _playPauseKeyHeld = true;
             return true;
         }
+        _playPauseKeyHeld = playPauseHeld;
     }
 
     if (keyboard.wasBackspacePressed()) {
@@ -215,7 +221,13 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
     auto chars = keyboard.getNewChars();
     for (char c : chars) {
         if (entity.domain == "media_player") {
-            if (c == '+' || c == '=') {
+            if (c == ',' ) {
+                if (_onCallService) _onCallService(entity.domain, "media_previous_track");
+                return true;
+            } else if (c == '/') {
+                if (_onCallService) _onCallService(entity.domain, "media_next_track");
+                return true;
+            } else if (c == '+' || c == '=') {
                 changeVolume(0.01f);
                 return true;
             } else if (c == '-' || c == '_') {
@@ -234,6 +246,7 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
     if (entity.domain == "media_player") {
         int volumeDirection = _scrollRepeater.update(keyboard);
         if (volumeDirection != 0) {
+            _playPauseKeyHeld = false;
             changeVolume(volumeDirection < 0 ? 0.01f : -0.01f);
             return true;
         }
