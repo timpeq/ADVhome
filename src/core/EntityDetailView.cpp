@@ -13,29 +13,21 @@ void EntityDetailView::draw(DisplayManager& display) {
     Entity entity = _entityManager.getEntity(_entityId);
     
     // Frame the detail widget like a small window; back remains a keyboard action.
-    canvas->fillRect(2, 2, 236, 132, 0x18E3);
-    canvas->drawRect(2, 2, 236, 132, TFT_DARKGREY);
-    canvas->fillRect(4, 4, 232, 14, TFT_BLUE);
+    canvas->fillRect(2, 18, 236, 116, 0x18E3);
+    canvas->drawRect(2, 18, 236, 116, TFT_DARKGREY);
+    canvas->fillRect(4, 20, 232, 14, TFT_BLUE);
     canvas->setTextColor(TFT_WHITE);
     canvas->setTextSize(1);
-    canvas->setCursor(8, 8);
+    canvas->setCursor(8, 24);
     if (_showEntityName) {
         canvas->print(TextScroller::visible(entity.friendlyName, 30));
     } else {
         canvas->print(entity.domain);
     }
-    display.drawBatteryIndicator();
-    canvas->drawRect(2, 2, 236, 132, TFT_DARKGREY);
+    canvas->drawRect(2, 18, 236, 116, TFT_DARKGREY);
     
     // Content
-    canvas->setCursor(4, 24);
-    canvas->setTextColor(TFT_CYAN);
-    canvas->setTextSize(1);
-    
-    String dispName = TextScroller::visible(entity.friendlyName, 38);
-    canvas->println(dispName);
-    
-    canvas->setCursor(4, 38);
+    canvas->setCursor(4, 40);
     canvas->setTextColor(TFT_WHITE);
     if (entity.domain == "scene") {
         canvas->print("Last run: ");

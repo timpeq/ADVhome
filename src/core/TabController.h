@@ -12,6 +12,7 @@ public:
     
     void nextTab();
     void prevTab();
+    void drawTabBar(DisplayManager& display, bool showBattery);
 
 private:
     struct TabInfo {
@@ -22,7 +23,6 @@ private:
     std::vector<TabInfo> _tabs;
     int _currentTabIndex = 0;
     
-    void drawTabBar(DisplayManager& display, bool showBattery);
 };
 
 #endif // TAB_CONTROLLER_H

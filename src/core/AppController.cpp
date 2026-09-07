@@ -274,6 +274,7 @@ void AppController::updateHAConnected() {
     if (_isDetailViewActive) {
         if (_redraw) {
             _display.clear();
+            _tabController.drawTabBar(_display, _config.getShowBattery());
             _detailView->draw(_display);
             _display.push();
             _redraw = false;
