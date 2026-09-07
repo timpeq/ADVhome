@@ -56,7 +56,11 @@ void DiagnosticView::draw(DisplayManager& display) {
     canvas->setCursor(5, canvas->getCursorY());
     canvas->print("Build: ");
     canvas->setTextColor(TFT_YELLOW);
+#ifdef ADVHOME_VERSION
+    canvas->println(ADVHOME_VERSION);
+#else
     canvas->println(__DATE__);
+#endif
 }
 
 bool DiagnosticView::handleInput(KeyboardManager& keyboard) {
