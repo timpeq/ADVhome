@@ -34,20 +34,23 @@ void ConfigView::draw(DisplayManager& display) {
     }
     
     int y = 25;
-    for (size_t i = 0; i < _settings.size(); i++) {
+    for (size_t i = _scrollOffset; i < _settings.size(); i++) {
+        int displayIndex = i - _scrollOffset;
+        if (displayIndex >= 5) break; // max 5 items visible
+        
         if (i == (size_t)_selectedIndex) {
-            canvas->fillRect(0, y + (i * 20) - 2, 240, 20, TFT_BLUE);
+            canvas->fillRect(0, y + (displayIndex * 20) - 2, 240, 20, TFT_BLUE);
             canvas->setTextColor(TFT_WHITE);
         } else {
             canvas->setTextColor(TFT_LIGHTGREY);
         }
         
         canvas->setTextSize(1);
-        canvas->setCursor(5, y + (i * 20));
+        canvas->setCursor(5, y + (displayIndex * 20));
         canvas->print(_settings[i].name);
         
         // Draw Value
-        canvas->setCursor(150, y + (i * 20));
+        canvas->setCursor(150, y + (displayIndex * 20));
         if (_settings[i].type == 0) {
             canvas->print(_showBattery ? "ON" : "OFF");
             if (_showBattery) canvas->setTextColor(TFT_GREEN);
@@ -124,9 +127,11 @@ bool ConfigView::handleInput(KeyboardManager& keyboard) {
     int direction = _scrollRepeater.update(keyboard);
     if (direction < 0 && _selectedIndex > 0) {
         _selectedIndex--;
+        if (_selectedIndex < _scrollOffset) _scrollOffset = _selectedIndex;
         handled = true;
     } else if (direction > 0 && _selectedIndex < (int)_settings.size() - 1) {
         _selectedIndex++;
+        if (_selectedIndex >= _scrollOffset + 5) _scrollOffset = _selectedIndex - 4;
         handled = true;
     }
     

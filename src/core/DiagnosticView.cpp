@@ -37,6 +37,26 @@ void DiagnosticView::draw(DisplayManager& display) {
         canvas->setTextColor(TFT_RED);
         canvas->println("No");
     }
+
+    canvas->setTextColor(TFT_WHITE);
+    canvas->setCursor(5, canvas->getCursorY());
+    canvas->print("WiFi RSSI: ");
+    canvas->setTextColor(TFT_YELLOW);
+    canvas->print(WiFi.RSSI());
+    canvas->println(" dBm");
+
+    canvas->setTextColor(TFT_WHITE);
+    canvas->setCursor(5, canvas->getCursorY());
+    canvas->print("Free Heap: ");
+    canvas->setTextColor(TFT_YELLOW);
+    canvas->print(ESP.getFreeHeap() / 1024);
+    canvas->println(" KB");
+    
+    canvas->setTextColor(TFT_WHITE);
+    canvas->setCursor(5, canvas->getCursorY());
+    canvas->print("Build: ");
+    canvas->setTextColor(TFT_YELLOW);
+    canvas->println(__DATE__);
 }
 
 bool DiagnosticView::handleInput(KeyboardManager& keyboard) {

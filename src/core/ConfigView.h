@@ -26,6 +26,7 @@ private:
     
     std::vector<Setting> _settings;
     int _selectedIndex = 0;
+    int _scrollOffset = 0;
     
     // Temporary variables for drawing
     bool _showBattery;

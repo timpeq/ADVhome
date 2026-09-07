@@ -4,7 +4,9 @@
 - [x] Use Up/Down arrows for volume control on the media detail page.
 - [x] Create a code request to allow cover, lock, and alarm control.
 - [x] Fix volume debouncing and input unity in EntityDetailView.
-- [x] Implement hold-down to fast-forward for media player.
+- [x] Implement progressive hold-down to fast-forward for media player with Min/Max settings.
+- [x] Fix Config view scrolling to support more settings than fit on screen.
+- [x] Add heap memory, WiFi RSSI, and build date tracking to Diagnostic View.
 - [x] Fix general time display in media player by tracking time locally instead of waiting for HA updates.
 - [ ] Fix the 'modal' view of the details so it doesn't change the top bar and looks like a window below the entity.
 
