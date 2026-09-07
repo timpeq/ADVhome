@@ -194,6 +194,28 @@ void HomeAssistantManager::callService(const String& domain, const String& servi
     _ws.sendTXT(payload);
     Serial.println("[HA] Sent call_service: " + payload);
 }
+
+void HomeAssistantManager::setMediaVolume(const String& entity_id, float volume) {
+    if (!_isConnected || !_isAuthenticated) return;
+
+    static int nextId = 1000;
+    volume = constrain(volume, 0.0f, 1.0f);
+
+    JsonDocument doc;
+    doc["id"] = nextId++;
+    doc["type"] = "call_service";
+    doc["domain"] = "media_player";
+    doc["service"] = "volume_set";
+    JsonObject target = doc["target"].to<JsonObject>();
+    target["entity_id"] = entity_id;
+    JsonObject data = doc["service_data"].to<JsonObject>();
+    data["volume_level"] = volume;
+
+    String payload;
+    serializeJson(doc, payload);
+    _ws.sendTXT(payload);
+    Serial.println("[HA] Sent volume_set: " + payload);
+}
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 

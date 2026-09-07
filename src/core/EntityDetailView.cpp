@@ -1,8 +1,8 @@
 #include "EntityDetailView.h"
 #include "TextScroller.h"
 
-EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService)
-    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _config(config) {}
+EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume)
+    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _config(config), _scrollRepeater(config) {}
 
 void EntityDetailView::setEntityId(const String& id) {
     _entityId = id;
@@ -166,16 +166,23 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
     }
     
     Entity entity = _entityManager.getEntity(_entityId);
+
+    auto changeVolume = [&](float delta) {
+        if (_onSetVolume) {
+            float nextVolume = constrain(entity.volumeLevel + delta, 0.0f, 1.0f);
+            _onSetVolume(entity.id, nextVolume);
+        }
+    };
     
     // Check for character-based inputs (media player controls)
     auto chars = keyboard.getNewChars();
     for (char c : chars) {
         if (entity.domain == "media_player") {
             if (c == '+' || c == '=') {
-                if (_onCallService) _onCallService(entity.domain, "volume_up");
+                changeVolume(0.01f);
                 return true;
             } else if (c == '-' || c == '_') {
-                if (_onCallService) _onCallService(entity.domain, "volume_down");
+                changeVolume(-0.01f);
                 return true;
             } else if (c == 'm' || c == 'M') {
                 if (_onCallService) _onCallService(entity.domain, "volume_mute");
@@ -188,12 +195,9 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
     }
     
     if (entity.domain == "media_player") {
-        if (keyboard.wasUpPressed()) {
-            if (_onCallService) _onCallService(entity.domain, "volume_up");
-            return true;
-        }
-        if (keyboard.wasDownPressed()) {
-            if (_onCallService) _onCallService(entity.domain, "volume_down");
+        int volumeDirection = _scrollRepeater.update(keyboard);
+        if (volumeDirection != 0) {
+            changeVolume(volumeDirection < 0 ? 0.01f : -0.01f);
             return true;
         }
     }

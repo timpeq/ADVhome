@@ -17,6 +17,7 @@ public:
     void fetchInitialStates();
     
     void callService(const String& domain, const String& service, const String& entity_id);
+    void setMediaVolume(const String& entity_id, float volume);
     
     bool isConnected() const { return _isConnected; }
     bool isAuthenticated() const { return _isAuthenticated; }
