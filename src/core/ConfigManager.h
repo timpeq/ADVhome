@@ -49,6 +49,9 @@ public:
     int getSeekStep();
     void setSeekStep(int seconds);
     
+    int getSeekStepMax();
+    void setSeekStepMax(int seconds);
+    
 private:
     Preferences _prefs;
 };

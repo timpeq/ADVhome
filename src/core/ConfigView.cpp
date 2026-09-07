@@ -6,7 +6,8 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView)
     _settings.push_back({"Reconnect Interval", 1});
     _settings.push_back({"Scroll Start Delay", 5});
     _settings.push_back({"Scroll Repeat", 6});
-    _settings.push_back({"Seek Step", 7});
+    _settings.push_back({"Seek Step (Min)", 7});
+    _settings.push_back({"Seek Step (Max)", 8});
     _settings.push_back({"Diagnostics", 4});
 }
 
@@ -16,6 +17,7 @@ void ConfigView::refreshValues() {
     _scrollDelay = _config.getScrollDelay();
     _scrollSpeed = _config.getScrollSpeed();
     _seekStep = _config.getSeekStep();
+    _seekStepMax = _config.getSeekStepMax();
 }
 
 void ConfigView::onEnter() {
@@ -62,6 +64,9 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 7) {
             canvas->print(String(_seekStep) + " s");
             canvas->setTextColor(TFT_ORANGE);
+        } else if (_settings[i].type == 8) {
+            canvas->print(String(_seekStepMax) + " s");
+            canvas->setTextColor(TFT_RED);
         }
     }
 }
@@ -89,7 +94,18 @@ void ConfigView::toggleCurrent() {
         else if (_seekStep == 10) _seekStep = 15;
         else if (_seekStep == 15) _seekStep = 30;
         else _seekStep = 5;
+        if (_seekStep > _seekStepMax) _seekStepMax = _seekStep;
         _config.setSeekStep(_seekStep);
+        _config.setSeekStepMax(_seekStepMax);
+    } else if (_settings[_selectedIndex].type == 8) {
+        if (_seekStepMax == 5) _seekStepMax = 10;
+        else if (_seekStepMax == 10) _seekStepMax = 15;
+        else if (_seekStepMax == 15) _seekStepMax = 30;
+        else if (_seekStepMax == 30) _seekStepMax = 60;
+        else _seekStepMax = 5;
+        if (_seekStepMax < _seekStep) _seekStep = _seekStepMax;
+        _config.setSeekStep(_seekStep);
+        _config.setSeekStepMax(_seekStepMax);
     }
 }
 

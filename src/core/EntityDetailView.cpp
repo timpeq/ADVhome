@@ -240,10 +240,12 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
             volumeDelta += (volDir < 0 ? 0.01f : -0.01f);
         }
 
+        uint32_t current_now = millis();
         // Custom Seek Logic
         if (keyboard.wasLeftPressed() || keyboard.wasRightPressed()) {
             _seekChangedLocally = false;
             _wasSeekHeld = false;
+            _seekHoldStartTime = current_now;
         }
 
         int sDir = _seekRepeater.updateLeftRight(keyboard);
@@ -296,7 +298,17 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
                     _targetSeekPosition += (now - entity.mediaPositionUpdatedAt) / 1000.0f;
                 }
             }
-            _targetSeekPosition += (scrubSeekDir * _config.getSeekStep());
+            
+            float holdDurationMs = now - _seekHoldStartTime;
+            float rampTimeMs = 3000.0f; // 3 seconds to reach max speed
+            float progress = holdDurationMs / rampTimeMs;
+            if (progress > 1.0f) progress = 1.0f;
+            
+            float minStep = _config.getSeekStep();
+            float maxStep = _config.getSeekStepMax();
+            float currentStep = minStep + (maxStep - minStep) * progress;
+            
+            _targetSeekPosition += (scrubSeekDir * currentStep);
             if (_targetSeekPosition < 0.0f) _targetSeekPosition = 0.0f;
             if (_targetSeekPosition > entity.mediaDuration) _targetSeekPosition = entity.mediaDuration;
             

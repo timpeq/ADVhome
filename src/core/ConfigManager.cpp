@@ -137,9 +137,17 @@ void ConfigManager::setScrollSpeed(int ms) {
 }
 
 int ConfigManager::getSeekStep() {
-    return _prefs.getInt("seek_step", 10);
+    return _prefs.getInt("seek_step", 5);
 }
 
 void ConfigManager::setSeekStep(int seconds) {
     _prefs.putInt("seek_step", seconds);
+}
+
+int ConfigManager::getSeekStepMax() {
+    return _prefs.getInt("seek_step_max", 30);
+}
+
+void ConfigManager::setSeekStepMax(int seconds) {
+    _prefs.putInt("seek_step_max", seconds);
 }

@@ -39,6 +39,7 @@ private:
 
     float _targetSeekPosition = -1.0f;
     uint32_t _lastSeekChangeTime = 0;
+    uint32_t _seekHoldStartTime = 0;
     bool _seekChangedLocally = false;
     bool _wasSeekHeld = false;
     

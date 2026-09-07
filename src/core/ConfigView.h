@@ -34,6 +34,7 @@ private:
     int _scrollDelay;
     int _scrollSpeed;
     int _seekStep;
+    int _seekStepMax;
     ScrollRepeater _scrollRepeater;
     
     void refreshValues();
