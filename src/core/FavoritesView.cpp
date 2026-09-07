@@ -1,18 +1,34 @@
 #include "FavoritesView.h"
 #include "TextScroller.h"
+#include <algorithm>
 
-FavoritesView::FavoritesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, int topY)
-    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect), _topY(topY), _scrollRepeater(config) {}
+namespace {
+void sortFavorites(std::vector<Entity>& entities, int sortMode) {
+    if (sortMode != 1) return;
+
+    std::sort(entities.begin(), entities.end(), [](const Entity& first, const Entity& second) {
+        int cmp = strcasecmp(first.friendlyName.c_str(), second.friendlyName.c_str());
+        if (cmp == 0) return first.friendlyName < second.friendlyName;
+        return cmp < 0;
+    });
+}
+}
+
+FavoritesView::FavoritesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle, int topY)
+    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect), _onEntityToggle(onEntityToggle), _topY(topY), _scrollRepeater(config) {}
 
 void FavoritesView::onEnter() {
     auto favIds = _config.getFavorites();
     _cachedEntities.clear();
+    bool hideUnavailable = _config.getHideUnavailable();
     for (const auto& id : favIds) {
         Entity e = _entityManager.getEntity(id);
         if (e.id != "") {
+            if (hideUnavailable && e.state == "unavailable") continue;
             _cachedEntities.push_back(e);
         }
     }
+    sortFavorites(_cachedEntities, _config.getFavoritesSort());
     
     if (_selectedIndex >= _cachedEntities.size()) {
         _selectedIndex = _cachedEntities.empty() ? 0 : _cachedEntities.size() - 1;
@@ -28,12 +44,15 @@ void FavoritesView::draw(DisplayManager& display) {
     // Refresh cache
     auto favIds = _config.getFavorites();
     _cachedEntities.clear();
+    bool hideUnavailable = _config.getHideUnavailable();
     for (const auto& id : favIds) {
         Entity e = _entityManager.getEntity(id);
         if (e.id != "") {
+            if (hideUnavailable && e.state == "unavailable") continue;
             _cachedEntities.push_back(e);
         }
     }
+    sortFavorites(_cachedEntities, _config.getFavoritesSort());
     
     if (_cachedEntities.empty()) {
         canvas->setCursor(5, y);
@@ -60,13 +79,8 @@ void FavoritesView::draw(DisplayManager& display) {
         }
         
         canvas->setCursor(5, y + (i * 15));
-        
-        canvas->setTextColor(TFT_YELLOW);
-        canvas->print("* ");
-        if (idx == _selectedIndex) canvas->setTextColor(TFT_WHITE);
-        else canvas->setTextColor(TFT_LIGHTGREY);
-        
-        String dispName = TextScroller::visible(entity.friendlyName, 20, idx == _selectedIndex);
+
+        String dispName = TextScroller::visible(entity.friendlyName, 22, idx == _selectedIndex);
         canvas->print(dispName);
         
         // Scenes store their last-activated timestamp as state; keep the list compact.
@@ -135,6 +149,11 @@ bool FavoritesView::handleInput(KeyboardManager& keyboard) {
     if (keyboard.wasEnterPressed()) {
         if (_onEntitySelect) {
             _onEntitySelect(_cachedEntities[_selectedIndex].id);
+        }
+        handled = true;
+    } else if (keyboard.wasSpacePressed()) {
+        if (_onEntityToggle) {
+            _onEntityToggle(_cachedEntities[_selectedIndex].id);
         }
         handled = true;
     }

@@ -2,8 +2,8 @@
 #include "TextScroller.h"
 #include <algorithm>
 
-EntitiesView::EntitiesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect)
-    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect), _scrollRepeater(config) {}
+EntitiesView::EntitiesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle)
+    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect), _onEntityToggle(onEntityToggle), _scrollRepeater(config) {}
 
 void EntitiesView::refreshCache() {
     _cachedEntities.clear();
@@ -247,6 +247,11 @@ bool EntitiesView::handleInput(KeyboardManager& keyboard) {
     if (keyboard.wasEnterPressed()) {
         if (_onEntitySelect) {
             _onEntitySelect(_cachedEntities[_selectedIndex]->id);
+        }
+        handled = true;
+    } else if (keyboard.wasSpacePressed()) {
+        if (_onEntityToggle && !_cachedEntities.empty()) {
+            _onEntityToggle(_cachedEntities[_selectedIndex]->id);
         }
         handled = true;
     }

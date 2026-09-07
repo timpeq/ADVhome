@@ -1,7 +1,7 @@
 #include "HomeView.h"
 
-HomeView::HomeView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect)
-    : _favoritesWidget(entityManager, config, onEntitySelect) {
+HomeView::HomeView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle)
+    : _favoritesWidget(entityManager, config, onEntitySelect, onEntityToggle) {
     _widgets.push_back(&_favoritesWidget);
 }
 

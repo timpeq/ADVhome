@@ -1,7 +1,7 @@
 #include "FavoritesWidget.h"
 
-FavoritesWidget::FavoritesWidget(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect)
-    : _favoritesView(entityManager, config, onEntitySelect, 40) {}
+FavoritesWidget::FavoritesWidget(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle)
+    : _favoritesView(entityManager, config, onEntitySelect, onEntityToggle, 40) {}
 
 void FavoritesWidget::draw(DisplayManager& display) {
     auto canvas = display.getCanvas();

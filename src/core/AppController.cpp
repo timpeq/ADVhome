@@ -224,9 +224,15 @@ void AppController::updateHAConnected() {
             _isDetailViewActive = true;
             _redraw = true;
         };
+        auto onToggle = [this](String entityId) {
+            Entity entity = _entityManager.getEntity(entityId);
+            if (entity.id != "") {
+                _haManager->callService(entity.domain, "toggle", entityId);
+            }
+        };
         
-        _entitiesView = new EntitiesView(_entityManager, _config, onSelect);
-        _homeView = new HomeView(_entityManager, _config, onSelect);
+        _entitiesView = new EntitiesView(_entityManager, _config, onSelect, onToggle);
+        _homeView = new HomeView(_entityManager, _config, onSelect, onToggle);
         _configView = new ConfigView(_config, *_diagView);
         
         auto onBack = [this]() {

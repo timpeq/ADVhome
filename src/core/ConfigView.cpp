@@ -3,6 +3,8 @@
 ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView)
     : _config(config), _diagnosticView(diagnosticView), _scrollRepeater(config) {
     _settings.push_back({"Battery % in Tab Bar", 0});
+    _settings.push_back({"Hide Unavailable on Home", 9});
+    _settings.push_back({"Favorites Sort", 2});
     _settings.push_back({"Reconnect Interval", 1});
     _settings.push_back({"Scroll Start Delay", 5});
     _settings.push_back({"Scroll Repeat", 6});
@@ -18,6 +20,8 @@ void ConfigView::refreshValues() {
     _scrollSpeed = _config.getScrollSpeed();
     _seekStep = _config.getSeekStep();
     _seekStepMax = _config.getSeekStepMax();
+    _favoritesSort = _config.getFavoritesSort();
+    _hideUnavailable = _config.getHideUnavailable();
 }
 
 void ConfigView::onEnter() {
@@ -57,6 +61,12 @@ void ConfigView::draw(DisplayManager& display) {
             else canvas->setTextColor(TFT_RED);
         } else if (_settings[i].type == 1) {
             canvas->print(String(_reconInt / 1000) + " sec");
+            canvas->setTextColor(TFT_GREEN);
+        } else if (_settings[i].type == 9) {
+            canvas->print(_hideUnavailable ? "YES" : "NO");
+            canvas->setTextColor(_hideUnavailable ? TFT_GREEN : TFT_LIGHTGREY);
+        } else if (_settings[i].type == 2) {
+            canvas->print(_favoritesSort == 0 ? "ORDER" : "NAME");
             canvas->setTextColor(TFT_CYAN);
         } else if (_settings[i].type == 5) {
             canvas->print(String(_scrollDelay) + " ms");
@@ -84,6 +94,9 @@ void ConfigView::toggleCurrent() {
         _reconInt += 1000;
         if (_reconInt > 30000) _reconInt = 1000;
         _config.setReconnectInterval(_reconInt);
+    } else if (_settings[_selectedIndex].type == 2) {
+        _favoritesSort = _favoritesSort == 0 ? 1 : 0;
+        _config.setFavoritesSort(_favoritesSort);
     } else if (_settings[_selectedIndex].type == 5) {
         _scrollDelay += 100;
         if (_scrollDelay > 1000) _scrollDelay = 200;
@@ -109,6 +122,9 @@ void ConfigView::toggleCurrent() {
         if (_seekStepMax < _seekStep) _seekStep = _seekStepMax;
         _config.setSeekStep(_seekStep);
         _config.setSeekStepMax(_seekStepMax);
+    } else if (_settings[_selectedIndex].type == 9) {
+        _hideUnavailable = !_hideUnavailable;
+        _config.setHideUnavailable(_hideUnavailable);
     }
 }
 

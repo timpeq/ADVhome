@@ -9,6 +9,7 @@ public:
     void update();
     
     bool wasEnterPressed() const;
+    bool wasSpacePressed() const;
     bool wasBackspacePressed() const;
     bool wasTabPressed() const;
     bool wasUpPressed() const;

@@ -29,10 +29,15 @@ public:
     void addFavorite(const String& entity_id);
     void removeFavorite(const String& entity_id);
     bool isFavorite(const String& entity_id);
+    int getFavoritesSort();
+    void setFavoritesSort(int sort);
     
     // UI Settings
     bool getShowBattery();
     void setShowBattery(bool show);
+    
+    bool getHideUnavailable();
+    void setHideUnavailable(bool hide);
     
     // Connection Settings
     int getReconnectInterval();

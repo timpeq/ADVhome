@@ -8,12 +8,15 @@ void KeyboardManager::update() {
 
 bool KeyboardManager::wasEnterPressed() const {
     return (_currentStatus.enter && !_lastStatus.enter) || 
-           (_currentStatus.space && !_lastStatus.space) ||
            (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '\n') != _currentStatus.word.end() &&
             std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '\n') == _lastStatus.word.end()) ||
            (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '\r') != _currentStatus.word.end() &&
             std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '\r') == _lastStatus.word.end()) ||
            M5Cardputer.BtnA.wasPressed();
+}
+
+bool KeyboardManager::wasSpacePressed() const {
+    return _currentStatus.space && !_lastStatus.space;
 }
 
 bool KeyboardManager::wasBackspacePressed() const {

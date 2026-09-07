@@ -30,12 +30,14 @@ private:
     
     // Temporary variables for drawing
     bool _showBattery;
+    bool _hideUnavailable;
     bool _showDiagnostics = false;
     int _reconInt;
     int _scrollDelay;
     int _scrollSpeed;
     int _seekStep;
     int _seekStepMax;
+    int _favoritesSort;
     ScrollRepeater _scrollRepeater;
     
     void refreshValues();

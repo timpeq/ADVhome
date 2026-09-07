@@ -7,7 +7,7 @@
 
 class HomeView : public View {
 public:
-    HomeView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect);
+    HomeView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle = nullptr);
 
     void draw(DisplayManager& display) override;
     bool handleInput(KeyboardManager& keyboard) override;

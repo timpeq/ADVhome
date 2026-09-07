@@ -9,7 +9,7 @@
 
 class EntitiesView : public View {
 public:
-    EntitiesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect);
+    EntitiesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle = nullptr);
     
     void onEnter() override;
     void draw(DisplayManager& display) override;
@@ -19,6 +19,7 @@ private:
     EntityManager& _entityManager;
     ConfigManager& _config;
     std::function<void(String)> _onEntitySelect;
+    std::function<void(String)> _onEntityToggle;
     
     std::vector<const Entity*> _cachedEntities;
     int _selectedIndex = 0;

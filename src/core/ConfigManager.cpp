@@ -95,6 +95,15 @@ bool ConfigManager::isFavorite(const String& entity_id) {
     }
     return false;
 }
+
+int ConfigManager::getFavoritesSort() {
+    return _prefs.getInt("fav_sort", 0);
+}
+
+void ConfigManager::setFavoritesSort(int sort) {
+    _prefs.putInt("fav_sort", sort);
+}
+
 // Adding new settings to ConfigManager.cpp
 bool ConfigManager::getShowBattery() {
     return _prefs.getBool("show_battery", true);
@@ -102,6 +111,14 @@ bool ConfigManager::getShowBattery() {
 
 void ConfigManager::setShowBattery(bool show) {
     _prefs.putBool("show_battery", show);
+}
+
+bool ConfigManager::getHideUnavailable() {
+    return _prefs.getBool("hide_unavail", false);
+}
+
+void ConfigManager::setHideUnavailable(bool hide) {
+    _prefs.putBool("hide_unavail", hide);
 }
 
 int ConfigManager::getReconnectInterval() {

@@ -9,7 +9,7 @@
 
 class FavoritesView : public View {
 public:
-    FavoritesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, int topY = 25);
+    FavoritesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle = nullptr, int topY = 25);
     
     void onEnter() override;
     void draw(DisplayManager& display) override;
@@ -19,6 +19,7 @@ private:
     EntityManager& _entityManager;
     ConfigManager& _config;
     std::function<void(String)> _onEntitySelect;
+    std::function<void(String)> _onEntityToggle;
     int _topY;
     
     std::vector<Entity> _cachedEntities;
