@@ -1,6 +1,80 @@
 #include "HomeAssistantManager.h"
+#include <M5Unified.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <AudioFileSource.h>
+#include <AudioGeneratorMP3a.h>
+#include <AudioGeneratorWAV.h>
+#include <AudioOutputI2S.h>
+#include <AudioLogger.h>
 
-HomeAssistantManager::HomeAssistantManager(ConfigManager& config, EntityManager& entityManager) : _config(config), _entityManager(entityManager) {}
+// Streams the HA TTS audio over HTTP(S) with the auth header ESP8266Audio's own sources don't support.
+class AuthenticatedHttpSource : public AudioFileSource {
+public:
+    AuthenticatedHttpSource(const String& token) : _token(token) {}
+
+    bool open(const char* url) override {
+        _url = url;
+        bool connected = _url.startsWith("https://")
+            ? (_secure.setInsecure(), _http.begin(_secure, _url))
+            : _http.begin(_plain, _url);
+        if (!connected) return false;
+
+        _http.addHeader("Authorization", "Bearer " + _token);
+        _http.addHeader("Accept", "audio/mpeg,audio/wav,application/octet-stream");
+        _http.setTimeout(15000);
+        int status = _http.GET();
+        Serial.println("[HA] TTS stream HTTP status: " + String(status) + ", size=" + String(_http.getSize()));
+        if (status < 200 || status >= 300) {
+            _http.end();
+            return false;
+        }
+        _size = _http.getSize();
+        _position = 0;
+        return true;
+    }
+
+    uint32_t read(void* data, uint32_t length) override {
+        auto* stream = _http.getStreamPtr();
+        if (!stream) return 0;
+        uint32_t waitStart = millis();
+        while (stream->available() == 0 && _http.connected()) {
+            if (millis() - waitStart > 3000) return 0; // stalled connection
+            yield();
+        }
+        size_t available = stream->available();
+        if (available == 0) return 0;
+        if (length > available) length = available;
+        if (_size >= 0 && length > (uint32_t)(_size - _position)) length = _size - _position;
+        int count = stream->read(reinterpret_cast<uint8_t*>(data), length);
+        if (count > 0) _position += count;
+        return count > 0 ? count : 0;
+    }
+
+    bool close() override { _http.end(); return true; }
+    bool isOpen() override { return _http.connected(); }
+    uint32_t getSize() override { return _size > 0 ? _size : 0; }
+    uint32_t getPos() override { return _position; }
+
+private:
+    String _token;
+    String _url;
+    HTTPClient _http;
+    WiFiClientSecure _secure;
+    WiFiClient _plain;
+    int _size = -1;
+    uint32_t _position = 0;
+};
+
+HomeAssistantManager::HomeAssistantManager(ConfigManager& config, EntityManager& entityManager) : _config(config), _entityManager(entityManager) {
+    audioLogger = &Serial; // ESP8266Audio silences decode/output errors by default
+}
+
+void HomeAssistantManager::resetWebSocket() {
+    _ws.disconnect();
+    _ws.~WebSocketsClient();
+    new (&_ws) WebSocketsClient();
+}
 
 void HomeAssistantManager::begin() {
     String url = _config.getHAUrl();
@@ -31,6 +105,8 @@ void HomeAssistantManager::begin() {
     
     _ws.onEvent(std::bind(&HomeAssistantManager::webSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     
+    Serial.printf("[HA] Opening %s connection, free heap=%u\n", isSecure ? "wss" : "ws", ESP.getFreeHeap());
+    Serial.flush();
     if (isSecure) {
         _ws.beginSSL(host, port, "/api/websocket");
     } else {
@@ -43,6 +119,14 @@ void HomeAssistantManager::begin() {
 
 void HomeAssistantManager::update() {
     _ws.loop();
+    if (_ttsGenerator) {
+        if (_ttsGenerator->isRunning() && _ttsGenerator->loop()) return;
+        Serial.println("[HA] TTS playback finished");
+        stopVoicePlayback();
+        if (_voiceCallback) _voiceCallback("Voice: finished");
+        return;
+    }
+    processVoiceResponse();
 }
 
 void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
@@ -77,7 +161,19 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
             filter["result"][0]["attributes"]["is_volume_muted"] = true;
             
             filter["event"]["event_type"] = true;
+            filter["event"]["type"] = true;
             filter["event"]["data"]["entity_id"] = true;
+            filter["event"]["data"]["runner_data"]["stt_binary_handler_id"] = true;
+            filter["event"]["data"]["stt_output"]["text"] = true;
+            filter["event"]["data"]["intent_input"] = true;
+            filter["event"]["data"]["intent_output"]["response"]["speech"]["plain"]["speech"] = true;
+            filter["event"]["data"]["intent_output"]["response"]["speech"]["ssml"]["speech"] = true;
+            filter["event"]["data"]["tts_input"] = true;
+            filter["event"]["data"]["tts_output"]["token"] = true;
+            filter["event"]["data"]["tts_output"]["url"] = true;
+            filter["event"]["data"]["tts_output"]["mime_type"] = true;
+            filter["event"]["data"]["tts_output"]["stream_response"] = true;
+            filter["event"]["data"]["message"] = true;
             filter["event"]["data"]["new_state"]["state"] = true;
             filter["event"]["data"]["new_state"]["attributes"]["friendly_name"] = true;
             filter["event"]["data"]["new_state"]["attributes"]["media_title"] = true;
@@ -101,6 +197,21 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                 if (isConversationResponse) {
                     deserializeJson(conversationDoc, payload, length);
                 }
+
+                    String eventType;
+                    if (msgType == "event") {
+                        eventType = doc["event"]["type"] | "";
+                        if (eventType.isEmpty()) eventType = doc["event"]["event_type"] | "";
+                    }
+                    // Only accept pipeline events for the run we started; otherwise a stray/foreign
+                    // Assist pipeline run (e.g. HA's continue-conversation follow-up, or another
+                    // satellite) gets shown as if it belonged to this device's chat.
+                    bool isVoiceEvent = msgType == "event" && doc["id"] == _voiceRequestId &&
+                        (eventType == "run-start" || eventType == "stt-start" ||
+                         eventType == "stt-end" || eventType == "intent-start" ||
+                         eventType == "intent-progress" || eventType == "intent-end" ||
+                         eventType == "tts-start" || eventType == "tts-end" ||
+                         eventType == "run-end" || eventType == "error");
                 
                 if (msgType == "auth_required") {
                     Serial.println("[HA] Auth required, sending token...");
@@ -116,6 +227,7 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                 } 
                 else if (msgType == "auth_ok") {
                     _isAuthenticated = true;
+                    _ttsTransitioning = false;
                     _haVersion = doc["ha_version"] | "Unknown";
                     Serial.println("[HA] Auth OK! Version: " + _haVersion);
                     
@@ -137,6 +249,57 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                     } else if (_conversationCallback) {
                         String errorMessage = doc["error"]["message"] | "Conversation request failed";
                         _conversationCallback("Error: " + errorMessage);
+                    }
+                }
+                else if (isVoiceEvent) {
+                    JsonObject eventData = doc["event"]["data"].as<JsonObject>();
+                        Serial.println("[HA] Voice event: " + eventType + " id=" + String((int)(doc["id"] | 0)));
+                    if (eventType == "run-start") {
+                        _voiceBinaryHandlerId = eventData["runner_data"]["stt_binary_handler_id"] | -1;
+                        Serial.println("[HA] Voice audio handler: " + String(_voiceBinaryHandlerId));
+                        if (_voiceCallback) _voiceCallback("Voice: listening");
+                    } else if (eventType == "stt-end") {
+                        String transcript = eventData["stt_output"]["text"] | "";
+                        if (!transcript.isEmpty() && _voiceCallback) {
+                            _voiceReceivedText = true;
+                            _voiceCallback("You: " + transcript);
+                        }
+                    } else if (eventType == "intent-end") {
+                        String response = eventData["intent_output"]["response"]["speech"]["plain"]["speech"] | "";
+                        if (response.isEmpty()) {
+                            response = eventData["intent_output"]["response"]["speech"]["ssml"]["speech"] | "";
+                        }
+                        Serial.println("[HA] Voice intent response: " + response);
+                        if (!response.isEmpty() && _voiceCallback) {
+                            _voiceCallback("HA: " + response);
+                        }
+                    } else if (eventType == "intent-start") {
+                        String input = eventData["intent_input"] | "";
+                        Serial.println("[HA] Voice intent input: " + input);
+                        if (_voiceCallback) _voiceCallback("Voice: thinking");
+                    } else if (eventType == "tts-start") {
+                        String input = eventData["tts_input"] | "";
+                        Serial.println("[HA] Voice TTS start: " + input);
+                        if (_voiceCallback) _voiceCallback("Voice: speaking");
+                    } else if (eventType == "tts-end") {
+                        String mimeType = eventData["tts_output"]["mime_type"] | "";
+                        String audioUrl = eventData["tts_output"]["url"] | "";
+                        bool streaming = eventData["tts_output"]["stream_response"] | false;
+                        Serial.println("[HA] Voice TTS end: mime=" + mimeType + ", streaming=" + String(streaming ? "yes" : "no"));
+                        Serial.println("[HA] Voice TTS URL: " + audioUrl);
+                        queueVoiceResponse(audioUrl, mimeType);
+                        if (_voiceCallback) _voiceCallback("Voice: response ready");
+                    } else if (eventType == "error") {
+                        String errorMessage = eventData["message"] | "Voice pipeline failed";
+                        bool staleNoTextError = errorMessage.indexOf("text recognized") >= 0;
+                        if (!_voiceReceivedText || !staleNoTextError) {
+                            if (_voiceCallback) _voiceCallback("Error: " + errorMessage);
+                        }
+                    } else if (eventType == "run-end") {
+                        _voiceBinaryHandlerId = -1;
+                        _voiceRunFinished = true;
+                        _voiceRequestId = 0;
+                        if (_voiceCallback) _voiceCallback("Voice: finished");
                     }
                 }
                 else if (msgType == "result" && doc["id"] == 1 && doc["success"]) {
@@ -229,6 +392,169 @@ void HomeAssistantManager::sendConversation(const String& text) {
     serializeJson(doc, payload);
     _ws.sendTXT(payload);
     Serial.println("[HA] Sent conversation/process");
+}
+
+bool HomeAssistantManager::startVoicePipeline() {
+    // Barge-in: talking again immediately drops any TTS playback in progress or queued.
+    if (_ttsGenerator || _ttsSource || _ttsPending) {
+        Serial.println("[HA] Barge-in: interrupting TTS playback for new voice request");
+        _ttsPending = false;
+        _ttsUrl = "";
+        stopVoicePlayback();
+    }
+
+    if (!_isConnected || !_isAuthenticated) return false;
+
+    JsonDocument doc;
+    _voiceRequestId = _nextMsgId++;
+    _voiceBinaryHandlerId = -1;
+    _voiceRunFinished = false;
+    _voiceReceivedText = false;
+    doc["id"] = _voiceRequestId;
+    doc["type"] = "assist_pipeline/run";
+    doc["start_stage"] = "stt";
+    doc["end_stage"] = "tts";
+    doc["input"]["sample_rate"] = 16000;
+
+    String payload;
+    serializeJson(doc, payload);
+    _ws.sendTXT(payload);
+    if (_voiceCallback) _voiceCallback("Voice: starting");
+    return true;
+}
+
+void HomeAssistantManager::sendVoiceAudio(const int16_t* samples, size_t sampleCount) {
+    if (_voiceBinaryHandlerId < 0 || !samples || sampleCount == 0) return;
+
+    size_t packetSize = 1 + sampleCount * sizeof(int16_t);
+    if (_voicePacket.size() < packetSize) _voicePacket.resize(packetSize);
+    _voicePacket[0] = static_cast<uint8_t>(_voiceBinaryHandlerId);
+    memcpy(_voicePacket.data() + 1, samples, sampleCount * sizeof(int16_t));
+    _ws.sendBIN(_voicePacket.data(), packetSize);
+}
+
+void HomeAssistantManager::finishVoicePipeline() {
+    if (_voiceBinaryHandlerId < 0) return;
+    uint8_t endMarker = static_cast<uint8_t>(_voiceBinaryHandlerId);
+    _ws.sendBIN(&endMarker, 1);
+    _voiceBinaryHandlerId = -1;
+}
+
+void HomeAssistantManager::queueVoiceResponse(const String& url, const String& mimeType) {
+    if (url.isEmpty()) return;
+    _ttsUrl = url;
+    _ttsMimeType = mimeType;
+    _ttsPending = true;
+}
+
+void HomeAssistantManager::processVoiceResponse() {
+    if (!_ttsPending || _ttsUrl.isEmpty() || !_voiceRunFinished) return;
+    if (!_isConnected || !_isAuthenticated) return;
+    if (_ttsGenerator) return;
+
+    if (!_config.getTtsEnabled()) {
+        // Leave the websocket/mic pipeline untouched; only the audio download+decode is skipped.
+        _ttsPending = false;
+        _ttsUrl = "";
+        if (_voiceCallback) _voiceCallback("Voice: finished");
+        return;
+    }
+
+    // HA local engines (e.g. Piper) typically return wav; cloud/Nabu TTS returns mp3.
+    // Default to mp3 when the mime type is missing/unrecognized since that's HA's overall default.
+    bool isWav = _ttsMimeType.indexOf("wav") >= 0;
+
+    String url = _ttsUrl;
+    String baseUrl = _config.getHAUrl();
+    if (baseUrl.endsWith("/")) baseUrl.remove(baseUrl.length() - 1);
+    if (url.startsWith("/")) {
+        url = baseUrl + url;
+    } else if (url.startsWith("http://") || url.startsWith("https://")) {
+        int authorityStart = url.indexOf("://") + 3;
+        int pathStart = url.indexOf('/', authorityStart);
+        if (pathStart >= 0) {
+            url = baseUrl + url.substring(pathStart);
+        }
+    }
+    url.trim();
+
+    // --- NGINX / TLS BYPASS ---
+    // The user confirmed that the same host accepts plain HTTP on port 8123.
+    // We rewrite the URL from https://host/api... to http://host:8123/api...
+    // This completely bypasses the TLS overhead and Nginx SNI issues!
+    if (url.startsWith("https://")) {
+        String rewritten = url;
+        rewritten.replace("https://", "http://");
+        int pathStart = rewritten.indexOf('/', 7);
+        if (pathStart != -1) {
+            String hostPart = rewritten.substring(7, pathStart);
+            if (hostPart.indexOf(':') == -1) {
+                rewritten = "http://" + hostPart + ":8123" + rewritten.substring(pathStart);
+            }
+        }
+        url = rewritten;
+    }
+
+    Serial.println("[HA] Streaming TTS (" + String(isWav ? "wav" : "mp3") + "): " + url);
+    _ttsTransitioning = true;
+    resetWebSocket();
+    _isConnected = false;
+    _isAuthenticated = false;
+    delay(100);
+
+    _ttsSource = new AuthenticatedHttpSource(_config.getHAToken());
+    if (!_ttsSource->open(url.c_str())) {
+        Serial.println("[HA] TTS stream connection failed");
+        stopVoicePlayback();
+        if (_voiceCallback) _voiceCallback("Error: TTS stream connection failed");
+        _ttsPending = false;
+        return;
+    }
+
+    M5.Speaker.end(); // release I2S_NUM_1 so AudioOutputI2S can drive it directly
+    _ttsOutput = new AudioOutputI2S(1);
+    _ttsOutput->SetPinout(41, 43, 42);
+    _ttsOutput->SetOutputModeMono(true);
+    _ttsOutput->SetGain(1.0);
+
+    _ttsGenerator = isWav ? static_cast<AudioGenerator*>(new AudioGeneratorWAV())
+                          : static_cast<AudioGenerator*>(new AudioGeneratorMP3a());
+
+    if (_ttsGenerator->begin(_ttsSource, _ttsOutput)) {
+        _ttsPending = false;
+        Serial.println("[HA] TTS playback started");
+        if (_voiceCallback) _voiceCallback("Voice: playing");
+    } else {
+        Serial.println("[HA] TTS decoder failed to start");
+        stopVoicePlayback();
+        if (_voiceCallback) _voiceCallback("Error: TTS decoder startup failed");
+    }
+}
+
+void HomeAssistantManager::stopVoicePlayback() {
+    if (_ttsGenerator) {
+        _ttsGenerator->stop();
+        delete _ttsGenerator;
+        _ttsGenerator = nullptr;
+    }
+    if (_ttsSource) {
+        _ttsSource->close();
+        delete _ttsSource;
+        _ttsSource = nullptr;
+    }
+    if (_ttsOutput) {
+        _ttsOutput->stop();
+        delete _ttsOutput;
+        _ttsOutput = nullptr;
+    }
+    if (!M5.Speaker.isRunning()) M5.Speaker.begin();
+
+    if (!_isConnected) {
+        Serial.println("[HA] Resuming Home Assistant WebSocket after TTS");
+        begin();
+    }
+    Serial.printf("[HA] TTS playback stopped, free heap=%u\n", ESP.getFreeHeap());
+    Serial.flush();
 }
 
 void HomeAssistantManager::callService(const String& domain, const String& service, const String& entity_id) {

@@ -20,6 +20,9 @@ public:
 
     void clearWifiConfig();
 
+    // Reload cached power-management settings from NVS (call after external prefs changes)
+    void reloadPowerSettingsCache();
+
     // Home Assistant Configuration
     bool hasHAConfig();
     String getHAUrl();
@@ -44,6 +47,9 @@ public:
 
     bool getShowChat();
     void setShowChat(bool show);
+    
+    bool getTtsEnabled();
+    void setTtsEnabled(bool enabled);
     
     int getDisplayBrightness();
     void setDisplayBrightness(int brightness);
@@ -80,6 +86,16 @@ public:
     
 private:
     Preferences _prefs;
+
+    // Cached copies of settings read every loop() iteration by checkPowerManagement();
+    // avoids hammering NVS (and flooding logs with NOT_FOUND) when keys are unset.
+    bool _cacheLoaded = false;
+    bool _escDeepSleep = false;
+    int _brightness = 200;
+    int _dimTO = 30;
+    int _dispOffTO = 60;
+    int _softSleepTO = 120;
+    int _deepSleepTO = 3600;
 };
 
 #endif // CONFIG_MANAGER_H

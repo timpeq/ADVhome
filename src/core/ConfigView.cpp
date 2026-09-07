@@ -17,6 +17,7 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, st
     _settings.push_back({"Soft Sleep T/O", 13});
     _settings.push_back({"Deep Sleep T/O", 14});
     _settings.push_back({"ESC for Sleep", 15});
+    _settings.push_back({"TTS Playback", 17});
     _settings.push_back({"Diagnostics", 4});
 }
 
@@ -36,6 +37,7 @@ void ConfigView::refreshValues() {
     _softSleepTO = _config.getSoftSleepTimeout();
     _deepSleepTO = _config.getDeepSleepTimeout();
     _escDeepSleep = _config.getEscDeepSleep();
+    _ttsEnabled = _config.getTtsEnabled();
 }
 
 void ConfigView::onEnter() {
@@ -115,6 +117,9 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 15) {
             canvas->print(_escDeepSleep ? "YES" : "NO");
             canvas->setTextColor(_escDeepSleep ? TFT_GREEN : TFT_LIGHTGREY);
+        } else if (_settings[i].type == 17) {
+            canvas->print(_ttsEnabled ? "ON" : "OFF");
+            canvas->setTextColor(_ttsEnabled ? TFT_GREEN : TFT_LIGHTGREY);
         }
     }
 }
@@ -187,6 +192,9 @@ void ConfigView::toggleCurrent() {
     } else if (_settings[_selectedIndex].type == 15) {
         _escDeepSleep = !_escDeepSleep;
         _config.setEscDeepSleep(_escDeepSleep);
+    } else if (_settings[_selectedIndex].type == 17) {
+        _ttsEnabled = !_ttsEnabled;
+        _config.setTtsEnabled(_ttsEnabled);
     }
 }
 

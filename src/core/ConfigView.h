@@ -47,6 +47,7 @@ private:
     int _softSleepTO;
     int _deepSleepTO;
     bool _escDeepSleep;
+    bool _ttsEnabled;
     ScrollRepeater _scrollRepeater;
     
     void refreshValues();

@@ -12,6 +12,7 @@ void setup() {
     M5Cardputer.Display.setRotation(1);
     
     Serial.println("ADVhome Starting...");
+    
     app.begin();
 }
 

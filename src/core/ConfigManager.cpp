@@ -4,6 +4,17 @@ ConfigManager::ConfigManager() {}
 
 void ConfigManager::begin() {
     _prefs.begin("advhome", false);
+    reloadPowerSettingsCache();
+}
+
+void ConfigManager::reloadPowerSettingsCache() {
+    _escDeepSleep = _prefs.getBool("esc_dpsleep", false);
+    _brightness = _prefs.getInt("brightness", 200);
+    _dimTO = _prefs.getInt("dimTO", 30);
+    _dispOffTO = _prefs.getInt("dispOffTO", 60);
+    _softSleepTO = _prefs.getInt("softSleepTO", 120);
+    _deepSleepTO = _prefs.getInt("deepSleepTO", 3600);
+    _cacheLoaded = true;
 }
 
 bool ConfigManager::hasWifiConfig() {
@@ -24,10 +35,11 @@ void ConfigManager::saveWifiConfig(const String& ssid, const String& password) {
 }
 
 bool ConfigManager::getEscDeepSleep() {
-    return _prefs.getBool("esc_dpsleep", false);
+    return _escDeepSleep;
 }
 
 void ConfigManager::setEscDeepSleep(bool enable) {
+    _escDeepSleep = enable;
     _prefs.putBool("esc_dpsleep", enable);
 }
 
@@ -137,43 +149,56 @@ void ConfigManager::setShowChat(bool show) {
     _prefs.putBool("show_chat", show);
 }
 
+bool ConfigManager::getTtsEnabled() {
+    return _prefs.getBool("ttsEnabled", true);
+}
+
+void ConfigManager::setTtsEnabled(bool enabled) {
+    _prefs.putBool("ttsEnabled", enabled);
+}
+
 int ConfigManager::getDisplayBrightness() {
-    return _prefs.getInt("brightness", 200); // Default brightness 200
+    return _brightness;
 }
 
 void ConfigManager::setDisplayBrightness(int brightness) {
+    _brightness = brightness;
     _prefs.putInt("brightness", brightness);
 }
 
 int ConfigManager::getDimTimeout() {
-    return _prefs.getInt("dimTO", 30); // Default 30 seconds
+    return _dimTO;
 }
 
 void ConfigManager::setDimTimeout(int timeout) {
+    _dimTO = timeout;
     _prefs.putInt("dimTO", timeout);
 }
 
 int ConfigManager::getDisplayOffTimeout() {
-    return _prefs.getInt("dispOffTO", 60); // Default 60 seconds
+    return _dispOffTO;
 }
 
 void ConfigManager::setDisplayOffTimeout(int timeout) {
+    _dispOffTO = timeout;
     _prefs.putInt("dispOffTO", timeout);
 }
 
 int ConfigManager::getSoftSleepTimeout() {
-    return _prefs.getInt("softSleepTO", 120); // Default 120 seconds
+    return _softSleepTO;
 }
 
 void ConfigManager::setSoftSleepTimeout(int timeout) {
+    _softSleepTO = timeout;
     _prefs.putInt("softSleepTO", timeout);
 }
 
 int ConfigManager::getDeepSleepTimeout() {
-    return _prefs.getInt("deepSleepTO", 3600); // Default 1 hour
+    return _deepSleepTO;
 }
 
 void ConfigManager::setDeepSleepTimeout(int timeout) {
+    _deepSleepTO = timeout;
     _prefs.putInt("deepSleepTO", timeout);
 }
 
