@@ -59,7 +59,7 @@ void FavoritesView::draw(DisplayManager& display) {
         canvas->setTextColor(TFT_LIGHTGREY);
         canvas->println("No favorites yet.");
         canvas->setCursor(5, y + 15);
-        canvas->println("Press F in Entities");
+        canvas->println("Press Ctrl-F in Entities");
         canvas->setCursor(5, y + 30);
         canvas->println("tab to add some.");
         return;
@@ -85,6 +85,7 @@ void FavoritesView::draw(DisplayManager& display) {
         
         // Scenes store their last-activated timestamp as state; keep the list compact.
         String displayState = entity.domain == "scene" ? "Scene" : entity.state;
+        displayState.replace("_", " ");
 
         // State on the right
         canvas->setCursor(165, y + (i * 15));
@@ -123,7 +124,7 @@ bool FavoritesView::handleInput(KeyboardManager& keyboard) {
     
     auto chars = keyboard.getNewChars();
     for (char c : chars) {
-        if (c == 'f' || c == 'F' || c == '*') {
+        if ((c == 'f' || c == 'F') && keyboard.isCtrlHeld()) {
             String id = _cachedEntities[_selectedIndex].id;
             _config.removeFavorite(id);
             handled = true;

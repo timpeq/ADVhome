@@ -62,6 +62,15 @@ private:
     String _password = "";
     String _currentInput = "";
     
+    uint32_t _lastActivityTime = 0;
+    enum class PowerState {
+        NORMAL,
+        DIM,
+        DISPLAY_OFF,
+        SOFT_SLEEP
+    };
+    PowerState _powerState = PowerState::NORMAL;
+    
     // Update handlers
     void updateScanning();
     void updateSelectSSID();
@@ -71,6 +80,7 @@ private:
     void updateHASetup();
     void updateHAConnecting();
     void updateHAConnected();
+    void checkPowerManagement();
     
     // Draw handlers
     void drawCurrentState();

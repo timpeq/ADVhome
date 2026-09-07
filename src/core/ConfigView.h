@@ -38,6 +38,12 @@ private:
     int _seekStep;
     int _seekStepMax;
     int _favoritesSort;
+    int _brightness;
+    int _dimTO;
+    int _dispOffTO;
+    int _softSleepTO;
+    int _deepSleepTO;
+    bool _escDeepSleep;
     ScrollRepeater _scrollRepeater;
     
     void refreshValues();

@@ -15,6 +15,9 @@ public:
     String getWifiSSID();
     String getWifiPassword();
     void saveWifiConfig(const String& ssid, const String& password);
+    bool getEscDeepSleep() const;
+    void setEscDeepSleep(bool enable);
+
     void clearWifiConfig();
 
     // Home Assistant Configuration
@@ -38,6 +41,21 @@ public:
     
     bool getHideUnavailable();
     void setHideUnavailable(bool hide);
+    
+    int getDisplayBrightness();
+    void setDisplayBrightness(int brightness);
+    
+    int getDimTimeout();
+    void setDimTimeout(int timeout);
+    
+    int getDisplayOffTimeout();
+    void setDisplayOffTimeout(int timeout);
+    
+    int getSoftSleepTimeout();
+    void setSoftSleepTimeout(int timeout);
+    
+    int getDeepSleepTimeout();
+    void setDeepSleepTimeout(int timeout);
     
     // Connection Settings
     int getReconnectInterval();

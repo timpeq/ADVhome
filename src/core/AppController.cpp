@@ -36,6 +36,11 @@ void AppController::update() {
         _lastState = _currentState;
     }
     
+    checkPowerManagement();
+    if (_powerState == PowerState::SOFT_SLEEP) {
+        return; // Don't run the rest of the update loop
+    }
+    
     switch (_currentState) {
         case AppState::SCANNING:
             updateScanning();
@@ -206,15 +211,10 @@ void AppController::updateHAConnecting() {
 }
 
 void AppController::updateHAConnected() {
-    if (!_wifi.isConnected()) {
-        _currentState = AppState::CONNECTING;
-        return;
-    }
+    bool isWifiDisc = !_wifi.isConnected();
+    bool isHADisc = !isWifiDisc && (_haManager && !_haManager->isConnected());
+    bool isDisconnected = isWifiDisc || isHADisc;
     
-    if (_haManager && !_haManager->isConnected()) {
-        _currentState = AppState::HA_CONNECTING;
-        return;
-    }
     
     if (!_diagView) {
         _diagView = new DiagnosticView(_wifi, *_haManager);
@@ -246,7 +246,13 @@ void AppController::updateHAConnected() {
         };
         
         auto onCallService = [this](String domain, String service) {
-            _haManager->callService(domain, service, _detailView->getEntityId());
+            String eId = _detailView->getEntityId();
+            if (service == "volume_mute" && domain == "media_player") {
+                Entity e = _entityManager.getEntity(eId);
+                _haManager->toggleMute(eId, !e.isVolumeMuted);
+            } else {
+                _haManager->callService(domain, service, eId);
+            }
         };
 
         auto onSetVolume = [this](String entityId, float volume) {
@@ -276,32 +282,59 @@ void AppController::updateHAConnected() {
         _redraw = true;
     }
     
-    if (wasDetailActive) {
-        if (_detailView->handleInput(_keyboard)) {
-            _redraw = true;
-        }
-    } else {
-        _tabController.update(_keyboard, _display, _redraw, _config.getShowBattery());
-        // We only clear _redraw if we stayed in tab view. 
-        // If an input caused us to switch to detail view, we leave _redraw = true.
-        if (!_isDetailViewActive) {
-            _redraw = false;
+    if (!isDisconnected) {
+        if (wasDetailActive) {
+            if (_detailView->handleInput(_keyboard)) {
+                _redraw = true;
+            }
+        } else {
+            _tabController.update(_keyboard, _display, _redraw, _config.getShowBattery());
+            if (!_isDetailViewActive) {
+                _redraw = false;
+            }
         }
     }
     
-    // Draw Detail View if active and needs redraw
-    if (_isDetailViewActive) {
+    if (isDisconnected) {
+        static uint32_t lastDot = 0;
+        static int dots = 0;
+        if (millis() - lastDot > 500) {
+            lastDot = millis();
+            dots = (dots + 1) % 4;
+            _redraw = true;
+        }
         if (_redraw) {
             _display.clear();
             _tabController.drawTabBar(_display, _config.getShowBattery());
-            _tabController.drawActiveView(_display); // Render the list beneath
-            _detailView->draw(_display);
+            _tabController.drawActiveView(_display);
+            if (_isDetailViewActive) _detailView->draw(_display);
+            
+            String waiting = "Waiting";
+            for (int i = 0; i < dots; i++) waiting += ".";
+            
+            if (isWifiDisc) {
+                _display.drawMessage("WiFi Disconnected", waiting, TFT_YELLOW);
+            } else {
+                _display.drawMessage("HA Disconnected", waiting, TFT_CYAN);
+            }
             _display.push();
             _redraw = false;
         }
-    } else if (wasDetailActive) {
-        // We just exited detail view. Force a redraw of tabs on the NEXT frame.
-        _redraw = true;
+    } else {
+        // Draw Detail View if active and needs redraw
+        if (_isDetailViewActive) {
+            if (_redraw) {
+                _display.clear();
+                _tabController.drawTabBar(_display, _config.getShowBattery());
+                _tabController.drawActiveView(_display); // Render the list beneath
+                _detailView->draw(_display);
+                _display.push();
+                _redraw = false;
+            }
+        } else if (wasDetailActive) {
+            // We just exited detail view. Force a redraw of tabs on the NEXT frame.
+            _redraw = true;
+        }
     }
 }
 
@@ -353,5 +386,80 @@ void AppController::drawCurrentState() {
         case AppState::HA_CONNECTED:
             // Handled by TabController inside updateHAConnected()
             break;
+    }
+}
+
+void AppController::checkPowerManagement() {
+    bool activity = _keyboard.hasActivity();
+    
+    // Check IMU for movement
+    if (!activity && M5.Imu.isEnabled()) {
+        float gx, gy, gz;
+        M5.Imu.update();
+        M5.Imu.getGyroData(&gx, &gy, &gz);
+        if (abs(gx) + abs(gy) + abs(gz) > 100.0f) { // Threshold for movement
+            activity = true;
+        }
+    }
+    
+    uint32_t now = millis();
+    
+    if (activity) {
+        _lastActivityTime = now;
+        if (_powerState != PowerState::NORMAL) {
+            _powerState = PowerState::NORMAL;
+            setCpuFrequencyMhz(240);
+            if (!_wifi.isConnected()) {
+                _wifi.connectTo(_ssid, _password);
+            }
+        }
+    }
+    if (_powerState == PowerState::NORMAL) {
+        // Always set brightness on activity in case the user changed it in the menu
+        M5.Display.setBrightness(_config.getDisplayBrightness());
+    }
+    
+    uint32_t idleTime = (now - _lastActivityTime) / 1000; // in seconds
+    
+    static uint32_t escHoldStartTime = 0;
+    bool forceDeepSleep = false;
+    
+    if (_config.getEscDeepSleep()) {
+        if (_keyboard.isEscHeld()) {
+            if (escHoldStartTime == 0) escHoldStartTime = now;
+            else if (now - escHoldStartTime > 1000) forceDeepSleep = true;
+        } else {
+            escHoldStartTime = 0;
+        }
+    }
+    
+    if (forceDeepSleep || idleTime >= (uint32_t)_config.getDeepSleepTimeout()) {
+        // Deep sleep - CPU halts until keypress
+        WiFi.disconnect(true);
+        M5.Display.setBrightness(0);
+        delay(100);
+        M5.Power.lightSleep(M5.Power.sleep_no_timer, true); // true = wake from wakeup pin
+        // On wake:
+        _lastActivityTime = millis();
+        _powerState = PowerState::NORMAL;
+        M5.Display.setBrightness(_config.getDisplayBrightness());
+        _wifi.connectTo(_ssid, _password);
+        return;
+    }
+    
+    if (_powerState != PowerState::SOFT_SLEEP && idleTime >= (uint32_t)_config.getSoftSleepTimeout()) {
+        _powerState = PowerState::SOFT_SLEEP;
+        M5.Display.setBrightness(0);
+        WiFi.disconnect(true); // Drop connection
+        setCpuFrequencyMhz(80); // Save power
+        return;
+    }
+    
+    if (_powerState != PowerState::DISPLAY_OFF && _powerState != PowerState::SOFT_SLEEP && idleTime >= (uint32_t)_config.getDisplayOffTimeout()) {
+        _powerState = PowerState::DISPLAY_OFF;
+        M5.Display.setBrightness(0);
+    } else if (_powerState == PowerState::NORMAL && idleTime >= (uint32_t)_config.getDimTimeout()) {
+        _powerState = PowerState::DIM;
+        M5.Display.setBrightness(10);
     }
 }

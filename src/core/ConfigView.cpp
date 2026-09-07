@@ -10,6 +10,12 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView)
     _settings.push_back({"Scroll Repeat", 6});
     _settings.push_back({"Seek Step (Min)", 7});
     _settings.push_back({"Seek Step (Max)", 8});
+    _settings.push_back({"Brightness", 10});
+    _settings.push_back({"Dim T/O", 11});
+    _settings.push_back({"Disp Off T/O", 12});
+    _settings.push_back({"Soft Sleep T/O", 13});
+    _settings.push_back({"Deep Sleep T/O", 14});
+    _settings.push_back({"ESC for Sleep", 15});
     _settings.push_back({"Diagnostics", 4});
 }
 
@@ -22,6 +28,12 @@ void ConfigView::refreshValues() {
     _seekStepMax = _config.getSeekStepMax();
     _favoritesSort = _config.getFavoritesSort();
     _hideUnavailable = _config.getHideUnavailable();
+    _brightness = _config.getDisplayBrightness();
+    _dimTO = _config.getDimTimeout();
+    _dispOffTO = _config.getDisplayOffTimeout();
+    _softSleepTO = _config.getSoftSleepTimeout();
+    _deepSleepTO = _config.getDeepSleepTimeout();
+    _escDeepSleep = _config.getEscDeepSleep();
 }
 
 void ConfigView::onEnter() {
@@ -80,6 +92,24 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 8) {
             canvas->print(String(_seekStepMax) + " s");
             canvas->setTextColor(TFT_RED);
+        } else if (_settings[i].type == 10) {
+            canvas->print(String(_brightness));
+            canvas->setTextColor(TFT_WHITE);
+        } else if (_settings[i].type == 11) {
+            canvas->print(String(_dimTO) + " s");
+            canvas->setTextColor(TFT_YELLOW);
+        } else if (_settings[i].type == 12) {
+            canvas->print(String(_dispOffTO) + " s");
+            canvas->setTextColor(TFT_ORANGE);
+        } else if (_settings[i].type == 13) {
+            canvas->print(String(_softSleepTO) + " s");
+            canvas->setTextColor(TFT_GREEN);
+        } else if (_settings[i].type == 14) {
+            canvas->print(String(_deepSleepTO) + " s");
+            canvas->setTextColor(TFT_PURPLE);
+        } else if (_settings[i].type == 15) {
+            canvas->print(_escDeepSleep ? "YES" : "NO");
+            canvas->setTextColor(_escDeepSleep ? TFT_GREEN : TFT_LIGHTGREY);
         }
     }
 }
@@ -125,6 +155,29 @@ void ConfigView::toggleCurrent() {
     } else if (_settings[_selectedIndex].type == 9) {
         _hideUnavailable = !_hideUnavailable;
         _config.setHideUnavailable(_hideUnavailable);
+    } else if (_settings[_selectedIndex].type == 10) {
+        _brightness += 25;
+        if (_brightness > 255) _brightness = 25;
+        _config.setDisplayBrightness(_brightness);
+    } else if (_settings[_selectedIndex].type == 11) {
+        _dimTO += 10;
+        if (_dimTO > 120) _dimTO = 10;
+        _config.setDimTimeout(_dimTO);
+    } else if (_settings[_selectedIndex].type == 12) {
+        _dispOffTO += 30;
+        if (_dispOffTO > 300) _dispOffTO = 30;
+        _config.setDisplayOffTimeout(_dispOffTO);
+    } else if (_settings[_selectedIndex].type == 13) {
+        _softSleepTO += 30;
+        if (_softSleepTO > 600) _softSleepTO = 60;
+        _config.setSoftSleepTimeout(_softSleepTO);
+    } else if (_settings[_selectedIndex].type == 14) {
+        _deepSleepTO += 300; // 5 min steps
+        if (_deepSleepTO > 7200) _deepSleepTO = 300;
+        _config.setDeepSleepTimeout(_deepSleepTO);
+    } else if (_settings[_selectedIndex].type == 15) {
+        _escDeepSleep = !_escDeepSleep;
+        _config.setEscDeepSleep(_escDeepSleep);
     }
 }
 

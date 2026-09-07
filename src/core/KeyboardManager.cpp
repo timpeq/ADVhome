@@ -133,3 +133,31 @@ bool KeyboardManager::isPlusHeld() const {
 bool KeyboardManager::isMinusHeld() const {
     return std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '-') != _currentStatus.word.end();
 }
+
+bool KeyboardManager::isCtrlHeld() const {
+    return _currentStatus.ctrl;
+}
+
+bool KeyboardManager::isEscHeld() const {
+    return _currentStatus.esc || std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '`') != _currentStatus.word.end();
+}
+
+bool KeyboardManager::hasActivity() const {
+    // Check if any specific functional keys were pressed this frame
+    if (wasEnterPressed() || wasSpacePressed() || wasBackspacePressed() || wasTabPressed() ||
+        wasUpPressed() || wasDownPressed() || wasLeftPressed() || wasRightPressed() ||
+        wasPlusPressed() || wasMinusPressed()) {
+        return true;
+    }
+    // Check if any character keys were pressed this frame
+    if (!getNewChars().empty()) {
+        return true;
+    }
+    // Check if any modifiers were pressed (simplistic check by state change)
+    if (_currentStatus.ctrl != _lastStatus.ctrl || _currentStatus.shift != _lastStatus.shift ||
+        _currentStatus.fn != _lastStatus.fn || _currentStatus.opt != _lastStatus.opt ||
+        _currentStatus.alt != _lastStatus.alt) {
+        return true;
+    }
+    return false;
+}

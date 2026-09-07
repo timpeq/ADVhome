@@ -139,7 +139,7 @@ bool EntitiesView::handleInput(KeyboardManager& keyboard) {
     
     auto chars = keyboard.getNewChars();
     for (char c : chars) {
-        if (c == 'f' || c == 'F' || c == '*') {
+        if ((c == 'f' || c == 'F') && keyboard.isCtrlHeld()) {
             if (!_cachedEntities.empty()) {
                 String id = _cachedEntities[_selectedIndex]->id;
                 if (_config.isFavorite(id)) {

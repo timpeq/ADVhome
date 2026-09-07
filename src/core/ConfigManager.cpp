@@ -23,6 +23,19 @@ void ConfigManager::saveWifiConfig(const String& ssid, const String& password) {
     _prefs.putString("wifi_pass", password);
 }
 
+bool ConfigManager::getEscDeepSleep() const {
+    _prefs.begin("advhome", true);
+    bool enable = _prefs.getBool("esc_dpsleep", false);
+    _prefs.end();
+    return enable;
+}
+
+void ConfigManager::setEscDeepSleep(bool enable) {
+    _prefs.begin("advhome", false);
+    _prefs.putBool("esc_dpsleep", enable);
+    _prefs.end();
+}
+
 void ConfigManager::clearWifiConfig() {
     _prefs.remove("wifi_ssid");
     _prefs.remove("wifi_pass");
@@ -114,11 +127,51 @@ void ConfigManager::setShowBattery(bool show) {
 }
 
 bool ConfigManager::getHideUnavailable() {
-    return _prefs.getBool("hide_unavail", false);
+    return _prefs.getBool("hideUnavail", false);
 }
 
 void ConfigManager::setHideUnavailable(bool hide) {
-    _prefs.putBool("hide_unavail", hide);
+    _prefs.putBool("hideUnavail", hide);
+}
+
+int ConfigManager::getDisplayBrightness() {
+    return _prefs.getInt("brightness", 200); // Default brightness 200
+}
+
+void ConfigManager::setDisplayBrightness(int brightness) {
+    _prefs.putInt("brightness", brightness);
+}
+
+int ConfigManager::getDimTimeout() {
+    return _prefs.getInt("dimTO", 30); // Default 30 seconds
+}
+
+void ConfigManager::setDimTimeout(int timeout) {
+    _prefs.putInt("dimTO", timeout);
+}
+
+int ConfigManager::getDisplayOffTimeout() {
+    return _prefs.getInt("dispOffTO", 60); // Default 60 seconds
+}
+
+void ConfigManager::setDisplayOffTimeout(int timeout) {
+    _prefs.putInt("dispOffTO", timeout);
+}
+
+int ConfigManager::getSoftSleepTimeout() {
+    return _prefs.getInt("softSleepTO", 120); // Default 120 seconds
+}
+
+void ConfigManager::setSoftSleepTimeout(int timeout) {
+    _prefs.putInt("softSleepTO", timeout);
+}
+
+int ConfigManager::getDeepSleepTimeout() {
+    return _prefs.getInt("deepSleepTO", 3600); // Default 1 hour
+}
+
+void ConfigManager::setDeepSleepTimeout(int timeout) {
+    _prefs.putInt("deepSleepTO", timeout);
 }
 
 int ConfigManager::getReconnectInterval() {

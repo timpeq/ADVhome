@@ -230,6 +230,25 @@ void HomeAssistantManager::setMediaVolume(const String& entity_id, float volume)
     Serial.println("[HA] Sent volume_set: " + payload);
 }
 
+void HomeAssistantManager::toggleMute(const String& entity_id, bool is_muted) {
+    if (!_isConnected || !_isAuthenticated) return;
+
+    JsonDocument doc;
+    doc["id"] = _nextMsgId++;
+    doc["type"] = "call_service";
+    doc["domain"] = "media_player";
+    doc["service"] = "volume_mute";
+    JsonObject target = doc["target"].to<JsonObject>();
+    target["entity_id"] = entity_id;
+    JsonObject data = doc["service_data"].to<JsonObject>();
+    data["is_volume_muted"] = is_muted;
+
+    String payload;
+    serializeJson(doc, payload);
+    _ws.sendTXT(payload);
+    Serial.println("[HA] Sent volume_mute: " + payload);
+}
+
 void HomeAssistantManager::seekMedia(const String& entity_id, float position) {
     if (!_isConnected || !_isAuthenticated) return;
 

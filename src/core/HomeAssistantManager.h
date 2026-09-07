@@ -20,6 +20,7 @@ public:
     void callSecureService(const String& domain, const String& service, const String& entity_id, const String& code);
     void setMediaVolume(const String& entity_id, float volume);
     void seekMedia(const String& entity_id, float position);
+    void toggleMute(const String& entity_id, bool is_muted);
     void adjustEntity(const String& entity_id, int direction);
     
     bool isConnected() const { return _isConnected; }

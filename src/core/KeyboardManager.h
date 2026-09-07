@@ -27,7 +27,11 @@ public:
     bool isEnterHeld() const;
     bool isPlusHeld() const;
     bool isMinusHeld() const;
+    bool isCtrlHeld() const;
+    bool isEscHeld() const;
     bool isCharHeld(char character) const;
+    
+    bool hasActivity() const;
     
     // Returns any new character keys that were pressed this frame
     std::vector<char> getNewChars() const;
