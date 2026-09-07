@@ -9,6 +9,8 @@
 - [x] Add heap memory, WiFi RSSI, and build date tracking to Diagnostic View.
 - [x] Fix general time display in media player by tracking time locally instead of waiting for HA updates.
 - [x] Fix the 'modal' view of the details so it doesn't change the top bar and looks like a window below the entity.
+- [ ] Allow navigating directly to adjacent entities (next/previous) using the TAB key while the Entity Detail modal is open.
+- [ ] Enhance the climate/thermostat widget in the Entity Detail View to cleanly display both the current ambient temperature and the target set temperature.
 
 ## Phase 2: Home Dashboard Completion
 - [x] Replace the first `Favs` top-level tab with `Home`.
