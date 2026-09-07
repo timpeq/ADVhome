@@ -46,6 +46,11 @@ void TabController::prevTab() {
     _tabs[_currentTabIndex].view->onEnter();
 }
 
+void TabController::drawActiveView(DisplayManager& display) {
+    if (_tabs.empty()) return;
+    _tabs[_currentTabIndex].view->draw(display);
+}
+
 void TabController::drawTabBar(DisplayManager& display, bool showBattery) {
     auto canvas = display.getCanvas();
     canvas->fillRect(0, 0, 240, 16, 0x18E3); // Dark greyish blue

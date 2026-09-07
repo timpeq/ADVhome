@@ -16,9 +16,10 @@ void EntityDetailView::draw(DisplayManager& display) {
     Entity entity = _entityManager.getEntity(_entityId);
     
     // Frame the detail widget like a small window; back remains a keyboard action.
-    canvas->fillRect(2, 18, 236, 116, 0x18E3);
-    canvas->drawRect(2, 18, 236, 116, TFT_DARKGREY);
-    canvas->fillRect(4, 20, 232, 14, TFT_BLUE);
+    canvas->fillRect(4, 20, 232, 114, TFT_BLACK); // Darken background to hide list below
+    canvas->drawRect(3, 19, 234, 116, TFT_DARKGREY); // Outer drop shadow effect
+    canvas->drawRect(4, 20, 232, 114, TFT_LIGHTGREY); // Inner window border
+    canvas->fillRect(5, 21, 230, 14, TFT_DARKCYAN); // Distinct title bar color
     canvas->setTextColor(TFT_WHITE);
     canvas->setTextSize(1);
     canvas->setCursor(8, 24);
@@ -28,8 +29,8 @@ void EntityDetailView::draw(DisplayManager& display) {
         String domainText = entity.domain;
         domainText.replace("_", " ");
         canvas->print(domainText);
+
     }
-    canvas->drawRect(2, 18, 236, 116, TFT_DARKGREY);
     
     // Content
     canvas->setCursor(4, 40);

@@ -283,6 +283,7 @@ void AppController::updateHAConnected() {
         if (_redraw) {
             _display.clear();
             _tabController.drawTabBar(_display, _config.getShowBattery());
+            _tabController.drawActiveView(_display); // Render the list beneath
             _detailView->draw(_display);
             _display.push();
             _redraw = false;

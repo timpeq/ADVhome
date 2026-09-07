@@ -13,6 +13,7 @@ public:
     void nextTab();
     void prevTab();
     void drawTabBar(DisplayManager& display, bool showBattery);
+    void drawActiveView(DisplayManager& display);
 
 private:
     struct TabInfo {

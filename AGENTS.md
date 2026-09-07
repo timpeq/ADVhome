@@ -16,17 +16,35 @@ Use Git to track new features as development progresses.
 - Check `git status` before starting work and before finishing.
 - Make focused commits as coherent features or fixes are completed.
 - Use clear commit messages that describe the behavior added or fixed.
-- Do not commit secrets, device credentials, or unrelated generated files.
+- Do not commit secrets, device credentials, or unrelated generated files (e.g., `.pio/`).
 - Do not rewrite or discard existing user changes unless explicitly requested.
 - Include relevant documentation and tests in the same feature commit when practical.
 
-## Validation
+## Validation & Deployment
 
-Before committing a change, run the narrowest relevant checks from the Nix shell. For firmware changes, at minimum run:
-
+Before committing a change, run the narrowest relevant checks from the Nix shell. 
+To build the firmware:
 ```sh
-nix develop
-pio run
+nix develop --command pio run
 ```
 
-Report checks that could not be run, along with any remaining concerns.
+To build AND flash the firmware automatically, use the provided deploy script:
+```sh
+nix develop --command deploy
+```
+The `deploy` script automatically waits for the device to be available on `/dev/ttyACM0` and names the binaries consistently.
+
+## System Architecture & Constraints
+
+**Memory Management (ESP32-S3):**
+The device has ~320KB of usable RAM. Home Assistant instances can have thousands of entities. 
+- *DO NOT* ingest all entities. Use `EntityManager::isSupportedDomain` to filter by domain.
+- For high-volume domains like `sensor`, always filter by `device_class` (e.g., `temperature`, `humidity`) inside the HTTP chunker and WebSocket listener in `HomeAssistantManager.cpp`.
+
+**UI Framework (TFT_eSPI):**
+- `AppController` manages the state machine and the `TabController`.
+- Modal windows (like `EntityDetailView`) should NOT clear the screen. Instead, they should be drawn *over* the `_tabController.drawActiveView(_display)` to create a floating window effect.
+- Coordinates are hardcoded for a 240x135 display. Always calculate relative to these bounds.
+
+**Versioning:**
+- Because Nix overrides `__DATE__` to a deterministic epoch (1980), we use `git_version.py` as a `pre:` script in `platformio.ini` to inject the short git hash into the `ADVHOME_VERSION` macro for version tracking.
