@@ -8,7 +8,7 @@
 - [x] Fix Config view scrolling to support more settings than fit on screen.
 - [x] Add heap memory, WiFi RSSI, and build date tracking to Diagnostic View.
 - [x] Fix general time display in media player by tracking time locally instead of waiting for HA updates.
-- [ ] Fix the 'modal' view of the details so it doesn't change the top bar and looks like a window below the entity.
+- [x] Fix the 'modal' view of the details so it doesn't change the top bar and looks like a window below the entity.
 
 ## Phase 2: Home Dashboard Completion
 - [x] Replace the first `Favs` top-level tab with `Home`.
