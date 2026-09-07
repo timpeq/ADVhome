@@ -17,6 +17,8 @@ public:
     bool wasRightPressed() const;
     bool isUpHeld() const;
     bool isDownHeld() const;
+    bool isLeftHeld() const;
+    bool isRightHeld() const;
     bool isEnterHeld() const;
     bool isCharHeld(char character) const;
     

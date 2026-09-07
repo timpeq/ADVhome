@@ -26,10 +26,15 @@ private:
     std::function<void(String, String, String, String)> _onSecureService;
     ConfigManager& _config;
     ScrollRepeater _scrollRepeater;
+    ScrollRepeater _seekRepeater;
     bool _showEntityName;
     SecurityCodeModal _securityModal;
     String _pendingSecureService;
     bool _playPauseKeyHeld = false;
+    
+    float _targetVolume = -1.0f;
+    uint32_t _lastVolumeChangeTime = 0;
+    bool _volumeChangedLocally = false;
     
     String _entityId;
 };

@@ -87,3 +87,13 @@ bool KeyboardManager::isEnterHeld() const {
 bool KeyboardManager::isCharHeld(char character) const {
     return std::find(_currentStatus.word.begin(), _currentStatus.word.end(), character) != _currentStatus.word.end();
 }
+
+bool KeyboardManager::isLeftHeld() const {
+    return _currentStatus.left ||
+           std::find(_currentStatus.word.begin(), _currentStatus.word.end(), ',') != _currentStatus.word.end();
+}
+
+bool KeyboardManager::isRightHeld() const {
+    return _currentStatus.right ||
+           std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '/') != _currentStatus.word.end();
+}

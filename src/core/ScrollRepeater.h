@@ -10,6 +10,9 @@ public:
 
     // Returns -1 for up, 1 for down, and 0 when no movement is due.
     int update(KeyboardManager& keyboard);
+    
+    // Returns -1 for left, 1 for right, and 0 when no movement is due.
+    int updateLeftRight(KeyboardManager& keyboard);
 
 private:
     ConfigManager& _config;

@@ -3,7 +3,7 @@
 #include "Graphics.h"
 
 EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, std::function<void(String, String, String, String)> onSecureService, bool showEntityName)
-    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _onSecureService(onSecureService), _config(config), _scrollRepeater(config), _showEntityName(showEntityName) {}
+    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _onSecureService(onSecureService), _config(config), _scrollRepeater(config), _seekRepeater(config), _showEntityName(showEntityName) {}
 
 void EntityDetailView::setEntityId(const String& id) {
     _entityId = id;
@@ -128,8 +128,14 @@ void EntityDetailView::draw(DisplayManager& display) {
         canvas->setCursor(10, infoY);
         canvas->setTextSize(1);
         canvas->setTextColor(TFT_LIGHTGREY);
-        int volPct = (int)(entity.volumeLevel * 100);
+        
+        float displayVolume = _volumeChangedLocally ? _targetVolume : entity.volumeLevel;
+        int volPct = (int)(displayVolume * 100);
+        
         canvas->print("Vol: ");
+        if (_volumeChangedLocally) {
+            canvas->setTextColor(TFT_CYAN); // Highlight when adjusting locally
+        }
         canvas->print(String(volPct) + "%");
         if (entity.isVolumeMuted) {
             canvas->setTextColor(TFT_RED);
@@ -185,74 +191,105 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
     }
 
     Entity entity = _entityManager.getEntity(_entityId);
+    bool handled = false;
 
-    if (entity.domain == "media_player") {
-        if (keyboard.wasLeftPressed()) {
-            if (_onCallService) _onCallService(entity.domain, "media_previous_track");
-            return true;
-        }
-        if (keyboard.wasRightPressed()) {
-            if (_onCallService) _onCallService(entity.domain, "media_next_track");
-            return true;
-        }
+    bool actionBack = false;
+    bool actionPlayPause = false;
+    bool actionStop = false;
+    bool actionMute = false;
+    int seekDir = 0;
+    float volumeDelta = 0.0f;
+    bool actionEnter = false;
 
-        bool playPauseHeld = keyboard.isEnterHeld() || keyboard.isCharHeld('p') || keyboard.isCharHeld('P');
-        if (playPauseHeld && !_playPauseKeyHeld) {
-            if (_onCallService) _onCallService(entity.domain, "media_play_pause");
-            _playPauseKeyHeld = true;
-            return true;
-        }
-        _playPauseKeyHeld = playPauseHeld;
-    }
-
+    // 1. Evaluate explicit keys
     if (keyboard.wasBackspacePressed()) {
-        if (_onBack) _onBack();
-        return true;
-    }
-
-    auto changeVolume = [&](float delta) {
-        if (_onSetVolume) {
-            float nextVolume = constrain(entity.volumeLevel + delta, 0.0f, 1.0f);
-            _onSetVolume(entity.id, nextVolume);
-        }
-    };
-    
-    // Check for character-based inputs (media player controls)
-    auto chars = keyboard.getNewChars();
-    for (char c : chars) {
-        if (entity.domain == "media_player") {
-            if (c == ',' ) {
-                if (_onCallService) _onCallService(entity.domain, "media_previous_track");
-                return true;
-            } else if (c == '/') {
-                if (_onCallService) _onCallService(entity.domain, "media_next_track");
-                return true;
-            } else if (c == '+' || c == '=') {
-                changeVolume(0.01f);
-                return true;
-            } else if (c == '-' || c == '_') {
-                changeVolume(-0.01f);
-                return true;
-            } else if (c == 'm' || c == 'M') {
-                if (_onCallService) _onCallService(entity.domain, "volume_mute");
-                return true;
-            } else if (c == 's' || c == 'S') {
-                if (_onCallService) _onCallService(entity.domain, "media_stop");
-                return true;
-            }
-        }
-    }
-    
-    if (entity.domain == "media_player") {
-        int volumeDirection = _scrollRepeater.update(keyboard);
-        if (volumeDirection != 0) {
-            _playPauseKeyHeld = false;
-            changeVolume(volumeDirection < 0 ? 0.01f : -0.01f);
-            return true;
-        }
+        actionBack = true;
     }
 
     if (keyboard.wasEnterPressed()) {
+        actionEnter = true;
+    }
+
+    // 2. Evaluate Media Player controls
+    if (entity.domain == "media_player") {
+        bool playPauseHeld = keyboard.isEnterHeld() || keyboard.isCharHeld('p') || keyboard.isCharHeld('P');
+        if (playPauseHeld && !_playPauseKeyHeld) {
+            actionPlayPause = true;
+        }
+        _playPauseKeyHeld = playPauseHeld;
+
+        auto chars = keyboard.getNewChars();
+        for (char c : chars) {
+            if (c == ',' ) seekDir = -1;
+            else if (c == '/') seekDir = 1;
+            else if (c == '+' || c == '=') volumeDelta += 0.01f;
+            else if (c == '-' || c == '_') volumeDelta -= 0.01f;
+            else if (c == 'm' || c == 'M') actionMute = true;
+            else if (c == 's' || c == 'S') actionStop = true;
+        }
+
+        int volDir = _scrollRepeater.update(keyboard);
+        if (volDir != 0) {
+            volumeDelta += (volDir < 0 ? 0.01f : -0.01f);
+        }
+
+        int sDir = _seekRepeater.updateLeftRight(keyboard);
+        if (sDir != 0) {
+            seekDir = sDir;
+        }
+    }
+
+    // 3. Execute Actions
+    if (actionBack) {
+        if (_onBack) _onBack();
+        handled = true;
+    }
+    
+    if (entity.domain == "media_player") {
+        if (actionPlayPause && _onCallService) {
+            _onCallService(entity.domain, "media_play_pause");
+            handled = true;
+        }
+        if (actionStop && _onCallService) {
+            _onCallService(entity.domain, "media_stop");
+            handled = true;
+        }
+        if (actionMute && _onCallService) {
+            _onCallService(entity.domain, "volume_mute");
+            handled = true;
+        }
+        if (seekDir < 0 && _onCallService) {
+            _onCallService(entity.domain, "media_previous_track");
+            handled = true;
+        }
+        if (seekDir > 0 && _onCallService) {
+            _onCallService(entity.domain, "media_next_track");
+            handled = true;
+        }
+
+        // Volume logic
+        uint32_t now = millis();
+        if (volumeDelta != 0.0f) {
+            if (!_volumeChangedLocally) {
+                _targetVolume = entity.volumeLevel;
+            }
+            _targetVolume = constrain(_targetVolume + volumeDelta, 0.0f, 1.0f);
+            _volumeChangedLocally = true;
+            _lastVolumeChangeTime = now;
+            handled = true;
+        }
+
+        // Debounce volume sending (500ms after last change)
+        if (_volumeChangedLocally && (now - _lastVolumeChangeTime > 500 || (!keyboard.isUpHeld() && !keyboard.isDownHeld() && volumeDelta == 0.0f))) {
+            if (_onSetVolume) {
+                _onSetVolume(entity.id, _targetVolume);
+            }
+            _volumeChangedLocally = false;
+        }
+    }
+
+    // Handle generic enter actions
+    if (actionEnter && !handled) {
         if (entity.domain == "light" || entity.domain == "switch" || entity.domain == "fan" || entity.domain == "input_boolean") {
             if (_onCallService) _onCallService(entity.domain, "toggle");
         } else if (entity.domain == "cover") {
@@ -273,8 +310,8 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
         } else if (entity.domain == "automation") {
             if (_onCallService) _onCallService(entity.domain, "trigger");
         }
-        return true;
+        handled = true;
     }
     
-    return false;
+    return handled;
 }
