@@ -25,7 +25,9 @@ void EntityDetailView::draw(DisplayManager& display) {
     if (_showEntityName) {
         canvas->print(TextScroller::visible(entity.friendlyName, 30));
     } else {
-        canvas->print(entity.domain);
+        String domainText = entity.domain;
+        domainText.replace("_", " ");
+        canvas->print(domainText);
     }
     canvas->drawRect(2, 18, 236, 116, TFT_DARKGREY);
     

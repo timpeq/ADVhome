@@ -73,7 +73,9 @@ void EntitiesView::draw(DisplayManager& display) {
             }
             canvas->setTextSize(1);
             canvas->setCursor(currentX + 5, 24);
-            canvas->print(_subTabs[i]);
+            String tabText = _subTabs[i];
+            tabText.replace("_", " ");
+            canvas->print(tabText);
         }
         currentX += tabWidth;
     }
