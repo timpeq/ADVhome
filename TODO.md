@@ -30,7 +30,7 @@
 - [ ] Make ESC an escalating back button (close modals -> top of view -> home page -> top of home -> sleep).
 - [ ] Add short hardware notes covering speaker, microphone, gyro, sleep, and wake capabilities.
 - [ ] Investigate Cardputer speaker and microphone APIs.
-- [ ] Add push-to-talk microphone capture for Assist conversations (medium effort, about 1-2 weeks).
+- [x] Add experimental push-to-talk microphone capture for Assist conversations using the Cardputer GO button.
 - [ ] Verify and implement Assist pipeline audio session/framing over the authenticated WebSocket (high effort, about 2-4 weeks).
 - [ ] Decode Assist audio responses and play them through the Cardputer speaker, with text fallback (high effort, about 1-2 weeks after transport).
 

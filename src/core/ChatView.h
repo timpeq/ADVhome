@@ -12,13 +12,21 @@ public:
     void draw(DisplayManager& display) override;
     bool handleInput(KeyboardManager& keyboard) override;
     void receiveResponse(const String& response);
+    void receiveVoiceEvent(const String& event);
 
 private:
     HomeAssistantManager& _homeAssistant;
     std::vector<String> _messages;
     String _input;
+    bool _voiceRecording = false;
+    String _voiceStatus;
+    uint32_t _lastVoiceCapture = 0;
+    int16_t _voiceSamples[320] = {};
 
     void addMessage(const String& message);
+    void startVoiceRecording();
+    void stopVoiceRecording();
+    void captureVoiceAudio();
 };
 
 #endif // CHAT_VIEW_H

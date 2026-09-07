@@ -112,7 +112,10 @@ Create the long-lived access token in Home Assistant from your user profile page
 The Chat tab sends text through Home Assistant's authenticated WebSocket
 `conversation/process` command and keeps the returned conversation ID for
 follow-up messages. This is a text-first path and does not require audio
-processing on the Cardputer.
+processing on the Cardputer. On supported Cardputer hardware, hold the top GO
+button in Chat to stream a voice request to the Assist pipeline; release it to
+finish recording. Voice input is experimental and currently displays the
+transcript and agent response as text.
 
 ### Voice roadmap
 

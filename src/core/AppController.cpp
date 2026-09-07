@@ -212,7 +212,7 @@ void AppController::updateHAConnecting() {
 
 void AppController::updateHAConnected() {
     bool isWifiDisc = !_wifi.isConnected();
-    bool isHADisc = !isWifiDisc && (_haManager && !_haManager->isConnected());
+    bool isHADisc = !isWifiDisc && (_haManager && !_haManager->isConnected() && !_haManager->isTtsTransitioning());
     bool isDisconnected = isWifiDisc || isHADisc;
     
     
@@ -245,6 +245,10 @@ void AppController::updateHAConnected() {
         _chatView = new ChatView(*_haManager);
         _haManager->setConversationCallback([this](const String& response) {
             _chatView->receiveResponse(response);
+            _redraw = true;
+        });
+        _haManager->setVoiceCallback([this](const String& event) {
+            _chatView->receiveVoiceEvent(event);
             _redraw = true;
         });
         

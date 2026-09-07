@@ -99,6 +99,10 @@ bool KeyboardManager::isEnterHeld() const {
     return _currentStatus.enter || _currentStatus.space;
 }
 
+bool KeyboardManager::isGoHeld() const {
+    return M5Cardputer.BtnA.isHolding();
+}
+
 bool KeyboardManager::isCharHeld(char character) const {
     return std::find(_currentStatus.word.begin(), _currentStatus.word.end(), character) != _currentStatus.word.end();
 }

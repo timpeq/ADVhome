@@ -25,6 +25,7 @@ public:
     bool isLeftHeld() const;
     bool isRightHeld() const;
     bool isEnterHeld() const;
+    bool isGoHeld() const;
     bool isPlusHeld() const;
     bool isMinusHeld() const;
     bool isCtrlHeld() const;
