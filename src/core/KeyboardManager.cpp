@@ -64,10 +64,22 @@ bool KeyboardManager::wasLeftPressed() const {
             std::find(_lastStatus.word.begin(), _lastStatus.word.end(), ',') == _lastStatus.word.end());
 }
 
+bool KeyboardManager::wasLeftReleased() const {
+    return (!_currentStatus.left && _lastStatus.left) || 
+           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), ',') == _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), ',') != _lastStatus.word.end());
+}
+
 bool KeyboardManager::wasRightPressed() const {
     return (_currentStatus.right && !_lastStatus.right) || 
            (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '/') != _currentStatus.word.end() &&
             std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '/') == _lastStatus.word.end());
+}
+
+bool KeyboardManager::wasRightReleased() const {
+    return (!_currentStatus.right && _lastStatus.right) || 
+           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '/') == _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '/') != _lastStatus.word.end());
 }
 
 bool KeyboardManager::isUpHeld() const {

@@ -46,6 +46,9 @@ public:
     int getScrollSpeed();
     void setScrollSpeed(int ms);
     
+    int getSeekStep();
+    void setSeekStep(int seconds);
+    
 private:
     Preferences _prefs;
 };

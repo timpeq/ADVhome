@@ -6,6 +6,7 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView)
     _settings.push_back({"Reconnect Interval", 1});
     _settings.push_back({"Scroll Start Delay", 5});
     _settings.push_back({"Scroll Repeat", 6});
+    _settings.push_back({"Seek Step", 7});
     _settings.push_back({"Diagnostics", 4});
 }
 
@@ -14,6 +15,7 @@ void ConfigView::refreshValues() {
     _reconInt = _config.getReconnectInterval();
     _scrollDelay = _config.getScrollDelay();
     _scrollSpeed = _config.getScrollSpeed();
+    _seekStep = _config.getSeekStep();
 }
 
 void ConfigView::onEnter() {
@@ -57,6 +59,9 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 6) {
             canvas->print(String(_scrollSpeed) + " ms");
             canvas->setTextColor(TFT_YELLOW);
+        } else if (_settings[i].type == 7) {
+            canvas->print(String(_seekStep) + " s");
+            canvas->setTextColor(TFT_ORANGE);
         }
     }
 }
@@ -79,6 +84,12 @@ void ConfigView::toggleCurrent() {
         _scrollSpeed -= 20;
         if (_scrollSpeed < 40) _scrollSpeed = 200;
         _config.setScrollSpeed(_scrollSpeed);
+    } else if (_settings[_selectedIndex].type == 7) {
+        if (_seekStep == 5) _seekStep = 10;
+        else if (_seekStep == 10) _seekStep = 15;
+        else if (_seekStep == 15) _seekStep = 30;
+        else _seekStep = 5;
+        _config.setSeekStep(_seekStep);
     }
 }
 

@@ -246,7 +246,11 @@ void AppController::updateHAConnected() {
             _haManager->callSecureService(domain, service, entityId, code);
         };
         
-        _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSecureService);
+        auto onSeekMedia = [this](String entityId, float position) {
+            _haManager->seekMedia(entityId, position);
+        };
+        
+        _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSeekMedia, onSecureService);
         
         _tabController.addView(_homeView, "Home");
         _tabController.addView(_entitiesView, "Entities");

@@ -214,6 +214,27 @@ void HomeAssistantManager::setMediaVolume(const String& entity_id, float volume)
     Serial.println("[HA] Sent volume_set: " + payload);
 }
 
+void HomeAssistantManager::seekMedia(const String& entity_id, float position) {
+    if (!_isConnected || !_isAuthenticated) return;
+
+    if (position < 0) position = 0;
+
+    JsonDocument doc;
+    doc["id"] = _nextMsgId++;
+    doc["type"] = "call_service";
+    doc["domain"] = "media_player";
+    doc["service"] = "media_seek";
+    JsonObject target = doc["target"].to<JsonObject>();
+    target["entity_id"] = entity_id;
+    JsonObject data = doc["service_data"].to<JsonObject>();
+    data["seek_position"] = position;
+
+    String payload;
+    serializeJson(doc, payload);
+    _ws.sendTXT(payload);
+    Serial.println("[HA] Sent media_seek: " + payload);
+}
+
 void HomeAssistantManager::callSecureService(const String& domain, const String& service, const String& entity_id, const String& code) {
     if (!_isConnected || !_isAuthenticated) return;
 

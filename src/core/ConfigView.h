@@ -33,6 +33,7 @@ private:
     int _reconInt;
     int _scrollDelay;
     int _scrollSpeed;
+    int _seekStep;
     ScrollRepeater _scrollRepeater;
     
     void refreshValues();

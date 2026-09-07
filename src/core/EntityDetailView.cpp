@@ -2,8 +2,8 @@
 #include "TextScroller.h"
 #include "Graphics.h"
 
-EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, std::function<void(String, String, String, String)> onSecureService, bool showEntityName)
-    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _onSecureService(onSecureService), _config(config), _scrollRepeater(config), _seekRepeater(config), _showEntityName(showEntityName) {}
+EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, std::function<void(String, float)> onSeekMedia, std::function<void(String, String, String, String)> onSecureService, bool showEntityName)
+    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _onSeekMedia(onSeekMedia), _onSecureService(onSecureService), _config(config), _scrollRepeater(config), _seekRepeater(config), _showEntityName(showEntityName) {}
 
 void EntityDetailView::setEntityId(const String& id) {
     _entityId = id;
@@ -95,7 +95,9 @@ void EntityDetailView::draw(DisplayManager& display) {
         // Progress bar
         if (entity.mediaDuration > 0) {
             float currentPosition = entity.mediaPosition;
-            if (entity.state == "playing" && entity.mediaPositionUpdatedAt > 0) {
+            if (_seekChangedLocally) {
+                currentPosition = _targetSeekPosition;
+            } else if (entity.state == "playing" && entity.mediaPositionUpdatedAt > 0) {
                 currentPosition += (millis() - entity.mediaPositionUpdatedAt) / 1000.0f;
             }
             if (currentPosition > entity.mediaDuration) currentPosition = entity.mediaDuration;
@@ -203,9 +205,10 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
     bool actionPlayPause = false;
     bool actionStop = false;
     bool actionMute = false;
-    int seekDir = 0;
     float volumeDelta = 0.0f;
     bool actionEnter = false;
+    int tapSeekDir = 0;
+    int scrubSeekDir = 0;
 
     // 1. Evaluate explicit keys
     if (keyboard.wasBackspacePressed()) {
@@ -226,9 +229,7 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
 
         auto chars = keyboard.getNewChars();
         for (char c : chars) {
-            if (c == ',' ) seekDir = -1;
-            else if (c == '/') seekDir = 1;
-            else if (c == '+' || c == '=') volumeDelta += 0.01f;
+            if (c == '+' || c == '=') volumeDelta += 0.01f;
             else if (c == '-' || c == '_') volumeDelta -= 0.01f;
             else if (c == 'm' || c == 'M') actionMute = true;
             else if (c == 's' || c == 'S') actionStop = true;
@@ -239,10 +240,22 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
             volumeDelta += (volDir < 0 ? 0.01f : -0.01f);
         }
 
+        // Custom Seek Logic
+        if (keyboard.wasLeftPressed() || keyboard.wasRightPressed()) {
+            _seekChangedLocally = false;
+            _wasSeekHeld = false;
+        }
+
         int sDir = _seekRepeater.updateLeftRight(keyboard);
         if (sDir != 0) {
-            seekDir = sDir;
+            if (!keyboard.wasLeftPressed() && !keyboard.wasRightPressed()) {
+                _wasSeekHeld = true;
+                scrubSeekDir = sDir;
+            }
         }
+
+        if (keyboard.wasLeftReleased() && !_wasSeekHeld) tapSeekDir = -1;
+        if (keyboard.wasRightReleased() && !_wasSeekHeld) tapSeekDir = 1;
     }
 
     // 3. Execute Actions
@@ -264,17 +277,43 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
             _onCallService(entity.domain, "volume_mute");
             handled = true;
         }
-        if (seekDir < 0 && _onCallService) {
+        if (tapSeekDir < 0 && _onCallService) {
             _onCallService(entity.domain, "media_previous_track");
             handled = true;
         }
-        if (seekDir > 0 && _onCallService) {
+        if (tapSeekDir > 0 && _onCallService) {
             _onCallService(entity.domain, "media_next_track");
             handled = true;
         }
 
-        // Volume logic
         uint32_t now = millis();
+
+        // Scrub logic
+        if (scrubSeekDir != 0) {
+            if (!_seekChangedLocally) {
+                _targetSeekPosition = entity.mediaPosition;
+                if (entity.state == "playing" && entity.mediaPositionUpdatedAt > 0) {
+                    _targetSeekPosition += (now - entity.mediaPositionUpdatedAt) / 1000.0f;
+                }
+            }
+            _targetSeekPosition += (scrubSeekDir * _config.getSeekStep());
+            if (_targetSeekPosition < 0.0f) _targetSeekPosition = 0.0f;
+            if (_targetSeekPosition > entity.mediaDuration) _targetSeekPosition = entity.mediaDuration;
+            
+            _seekChangedLocally = true;
+            _lastSeekChangeTime = now;
+            handled = true;
+        }
+
+        // Debounce seek sending
+        if (_seekChangedLocally && (now - _lastSeekChangeTime > 500 || (!keyboard.isLeftHeld() && !keyboard.isRightHeld() && scrubSeekDir == 0))) {
+            if (_onSeekMedia) {
+                _onSeekMedia(entity.id, _targetSeekPosition);
+            }
+            _seekChangedLocally = false;
+        }
+
+        // Volume logic
         if (volumeDelta != 0.0f) {
             if (!_volumeChangedLocally) {
                 _targetVolume = entity.volumeLevel;

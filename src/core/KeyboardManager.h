@@ -15,6 +15,8 @@ public:
     bool wasDownPressed() const;
     bool wasLeftPressed() const;
     bool wasRightPressed() const;
+    bool wasLeftReleased() const;
+    bool wasRightReleased() const;
     bool isUpHeld() const;
     bool isDownHeld() const;
     bool isLeftHeld() const;
