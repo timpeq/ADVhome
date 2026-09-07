@@ -9,7 +9,7 @@
 
 class EntityDetailView : public View {
 public:
-    EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume);
+    EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, bool showEntityName = true);
     
     void setEntityId(const String& id);
     String getEntityId() const { return _entityId; }
@@ -24,6 +24,7 @@ private:
     std::function<void(String, float)> _onSetVolume;
     ConfigManager& _config;
     ScrollRepeater _scrollRepeater;
+    bool _showEntityName;
     
     String _entityId;
 };

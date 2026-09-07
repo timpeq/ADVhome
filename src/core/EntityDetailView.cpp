@@ -1,8 +1,8 @@
 #include "EntityDetailView.h"
 #include "TextScroller.h"
 
-EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume)
-    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _config(config), _scrollRepeater(config) {}
+EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, bool showEntityName)
+    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _config(config), _scrollRepeater(config), _showEntityName(showEntityName) {}
 
 void EntityDetailView::setEntityId(const String& id) {
     _entityId = id;
@@ -12,14 +12,20 @@ void EntityDetailView::draw(DisplayManager& display) {
     auto canvas = display.getCanvas();
     Entity entity = _entityManager.getEntity(_entityId);
     
-    // Top bar
-    canvas->fillRect(0, 0, 240, 20, TFT_BLUE);
+    // Frame the detail widget like a small window; back remains a keyboard action.
+    canvas->fillRect(2, 2, 236, 132, 0x18E3);
+    canvas->drawRect(2, 2, 236, 132, TFT_DARKGREY);
+    canvas->fillRect(4, 4, 232, 14, TFT_BLUE);
     canvas->setTextColor(TFT_WHITE);
     canvas->setTextSize(1);
-    canvas->setCursor(5, 5);
-    canvas->print("< Bksp ");
-    canvas->print(entity.domain);
+    canvas->setCursor(8, 8);
+    if (_showEntityName) {
+        canvas->print(TextScroller::visible(entity.friendlyName, 30));
+    } else {
+        canvas->print(entity.domain);
+    }
     display.drawBatteryIndicator();
+    canvas->drawRect(2, 2, 236, 132, TFT_DARKGREY);
     
     // Content
     canvas->setCursor(4, 24);
@@ -57,7 +63,9 @@ void EntityDetailView::draw(DisplayManager& display) {
         // Keep the footer clear while giving the track title more visual weight.
         int infoY = 54;
         
-        if (!entity.mediaTitle.isEmpty()) {
+        bool showMediaTitle = !entity.mediaTitle.isEmpty() &&
+            (!_showEntityName || !entity.mediaTitle.equalsIgnoreCase(entity.friendlyName));
+        if (showMediaTitle) {
             canvas->setCursor(10, infoY);
             canvas->setTextColor(TFT_WHITE);
             canvas->setTextSize(2);
@@ -74,7 +82,7 @@ void EntityDetailView::draw(DisplayManager& display) {
             if (!entity.mediaAlbum.isEmpty()) {
                 artist += " - " + entity.mediaAlbum;
             }
-            artist = TextScroller::visible(artist, 35, false);
+            artist = TextScroller::visible(artist, 35);
             canvas->print(artist);
             infoY += 13;
         }
@@ -107,7 +115,7 @@ void EntityDetailView::draw(DisplayManager& display) {
         }
         
         // Volume
-        infoY = 108;
+        infoY = 104;
         canvas->setCursor(10, infoY);
         canvas->setTextSize(1);
         canvas->setTextColor(TFT_LIGHTGREY);
@@ -120,7 +128,7 @@ void EntityDetailView::draw(DisplayManager& display) {
         }
         
         // Controls help at bottom
-        canvas->setCursor(5, 128);
+        canvas->setCursor(5, 123);
         canvas->setTextColor(0x6B6D);
         canvas->print("ENT:Play +/-:Vol </>:Skip M:Mute");
     } else {

@@ -18,7 +18,9 @@
 - [x] Use Up/Down arrows for volume control on the media detail page.
 - [ ] Create a code request to allow cover, lock, and alarm control.
 - [ ] Make the device sleep and wake on a button press or gyro movement.
+- [ ] Make ESC an escalating back button, where it closes modals, then backs to the top of the view, then back to the home page, then back to the top of the home page view, and then make holding the button instantly sleep (and ignore gyro for wake up for (configurable) seconds)
 - [ ] Investigate the Cardputer speaker and microphone APIs and hardware behavior.
+- [ ] Fix the 'modal' view of the details, it say the entity twice, where i don't actually want it to change the top bar, i just want it to look like a 'window' below that entity's view.
 
 ## Quick Follow-Ups
 
@@ -29,4 +31,3 @@
 - [ ] Add a reset or reconfiguration action for Wi-Fi and Home Assistant credentials.
 - [ ] Add a short hardware notes section covering the speaker, microphone, gyro, sleep, and wake capabilities.
 - [ ] Keep generated PlatformIO build output out of future feature commits unless a release artifact is intentionally required.
-- [ ] Make repeated presses of escape eventually take you back Home
