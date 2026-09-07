@@ -1,8 +1,8 @@
 #include "FavoritesView.h"
 #include "TextScroller.h"
 
-FavoritesView::FavoritesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect)
-    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect), _scrollRepeater(config) {}
+FavoritesView::FavoritesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, int topY)
+    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect), _topY(topY), _scrollRepeater(config) {}
 
 void FavoritesView::onEnter() {
     auto favIds = _config.getFavorites();
@@ -22,8 +22,8 @@ void FavoritesView::onEnter() {
 void FavoritesView::draw(DisplayManager& display) {
     auto canvas = display.getCanvas();
     
-    int y = 25;
-    int itemsPerPage = (135 - 25) / 15;
+    int y = _topY;
+    int itemsPerPage = (135 - y) / 15;
     
     // Refresh cache
     auto favIds = _config.getFavorites();
@@ -86,7 +86,7 @@ bool FavoritesView::handleInput(KeyboardManager& keyboard) {
     if (_cachedEntities.empty()) return false;
     
     bool handled = false;
-    int itemsPerPage = (135 - 37) / 15;
+    int itemsPerPage = (135 - _topY) / 15;
 
     int direction = _scrollRepeater.update(keyboard);
     if (direction < 0 && _selectedIndex > 0) {
@@ -120,7 +120,7 @@ bool FavoritesView::handleInput(KeyboardManager& keyboard) {
             for (size_t i = 0; i < _cachedEntities.size(); i++) {
                 if (_cachedEntities[i].friendlyName.substring(0, _searchPrefix.length()).equalsIgnoreCase(_searchPrefix)) {
                     _selectedIndex = i;
-                    int itemsPerPage = (135 - 37) / 15;
+                    int itemsPerPage = (135 - _topY) / 15;
                     if (_selectedIndex < _scrollOffset) _scrollOffset = _selectedIndex;
                     else if (_selectedIndex >= _scrollOffset + itemsPerPage) {
                         _scrollOffset = _selectedIndex - itemsPerPage + 1;

@@ -226,7 +226,7 @@ void AppController::updateHAConnected() {
         };
         
         _entitiesView = new EntitiesView(_entityManager, _config, onSelect);
-        _favoritesView = new FavoritesView(_entityManager, _config, onSelect);
+        _homeView = new HomeView(_entityManager, _config, onSelect);
         _configView = new ConfigView(_config, *_diagView);
         
         auto onBack = [this]() {
@@ -240,7 +240,7 @@ void AppController::updateHAConnected() {
         
         _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService);
         
-        _tabController.addView(_favoritesView, "Favs");
+        _tabController.addView(_homeView, "Home");
         _tabController.addView(_entitiesView, "Entities");
         _tabController.addView(_configView, "Config");
     }

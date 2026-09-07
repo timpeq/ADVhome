@@ -12,7 +12,7 @@
 #include "ConfigView.h"
 #include "DiagnosticView.h"
 #include "EntitiesView.h"
-#include "FavoritesView.h"
+#include "HomeView.h"
 #include "EntityDetailView.h"
 #include <Arduino.h>
 
@@ -44,7 +44,7 @@ private:
     TabController _tabController;
     DiagnosticView* _diagView = nullptr;
     EntitiesView* _entitiesView = nullptr;
-    FavoritesView* _favoritesView = nullptr;
+    HomeView* _homeView = nullptr;
     ConfigView* _configView = nullptr;
     EntityDetailView* _detailView = nullptr;
     

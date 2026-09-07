@@ -10,9 +10,17 @@ void EntitiesView::refreshCache() {
     
     String currentDomain = _subTabs[_currentSubTab];
     const auto& entitiesMap = _entityManager.getEntitiesMap();
+
+    if (currentDomain == "Favorites") {
+        auto favoriteIds = _config.getFavorites();
+        for (const auto& id : favoriteIds) {
+            auto entityIt = entitiesMap.find(id);
+            if (entityIt != entitiesMap.end()) _cachedEntities.push_back(&entityIt->second);
+        }
+    }
     
     for (const auto& pair : entitiesMap) {
-        if (currentDomain == "All" || pair.second.domain == currentDomain) {
+        if (currentDomain != "Favorites" && (currentDomain == "All" || pair.second.domain == currentDomain)) {
             _cachedEntities.push_back(&pair.second);
         }
     }

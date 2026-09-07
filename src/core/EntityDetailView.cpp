@@ -187,6 +187,17 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
         }
     }
     
+    if (entity.domain == "media_player") {
+        if (keyboard.wasUpPressed()) {
+            if (_onCallService) _onCallService(entity.domain, "volume_up");
+            return true;
+        }
+        if (keyboard.wasDownPressed()) {
+            if (_onCallService) _onCallService(entity.domain, "volume_down");
+            return true;
+        }
+    }
+
     // Media player prev/next with arrow keys (only when back style doesn't use left)
     if (entity.domain == "media_player") {
         if (keyboard.wasLeftPressed()) {
