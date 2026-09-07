@@ -63,3 +63,34 @@ int ScrollRepeater::updateLeftRight(KeyboardManager& keyboard) {
 
     return 0;
 }
+
+int ScrollRepeater::updatePlusMinus(KeyboardManager& keyboard) {
+    uint32_t now = millis();
+    bool minusHeld = keyboard.isMinusHeld();
+    bool plusHeld = keyboard.isPlusHeld();
+
+    if (keyboard.wasMinusPressed()) {
+        _holdStarted = now;
+        _lastMove = now;
+        return -1;
+    }
+    if (keyboard.wasPlusPressed()) {
+        _holdStarted = now;
+        _lastMove = now;
+        return 1;
+    }
+
+    if (!minusHeld && !plusHeld) {
+        _holdStarted = 0;
+        return 0;
+    }
+
+    if (_holdStarted != 0 &&
+        now - _holdStarted >= (uint32_t)_config.getScrollDelay() &&
+        now - _lastMove >= (uint32_t)_config.getScrollSpeed()) {
+        _lastMove = now;
+        return minusHeld ? -1 : 1;
+    }
+
+    return 0;
+}

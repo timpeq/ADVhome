@@ -14,6 +14,9 @@ public:
     // Returns -1 for left, 1 for right, and 0 when no movement is due.
     int updateLeftRight(KeyboardManager& keyboard);
 
+    // Returns -1 for minus, 1 for plus, and 0 when no movement is due.
+    int updatePlusMinus(KeyboardManager& keyboard);
+
 private:
     ConfigManager& _config;
     uint32_t _holdStarted = 0;

@@ -251,6 +251,40 @@ void HomeAssistantManager::seekMedia(const String& entity_id, float position) {
     Serial.println("[HA] Sent media_seek: " + payload);
 }
 
+void HomeAssistantManager::adjustEntity(const String& entity_id, int direction) {
+    if (!_isAuthenticated) return;
+    
+    Entity entity = _entityManager.getEntity(entity_id);
+    if (entity.id == "") return;
+
+    if (entity.domain == "media_player") {
+        float step = 0.05f; // 5%
+        float newVol = entity.volumeLevel + (direction > 0 ? step : -step);
+        if (newVol < 0.0f) newVol = 0.0f;
+        if (newVol > 1.0f) newVol = 1.0f;
+        setMediaVolume(entity_id, newVol);
+        
+        // Optimistically update the entity locally so rapid presses reflect instantly
+        _entityManager.updateMediaAttributes(entity_id, entity.mediaTitle, entity.mediaArtist, entity.mediaAlbum, entity.mediaDuration, entity.mediaPosition, newVol, entity.isVolumeMuted);
+    } else if (entity.domain == "light") {
+        DynamicJsonDocument doc(512);
+        doc["id"] = _nextMsgId++;
+        doc["type"] = "call_service";
+        doc["domain"] = "light";
+        doc["service"] = "turn_on";
+        
+        JsonObject target = doc.createNestedObject("target");
+        target["entity_id"] = entity_id;
+        
+        JsonObject service_data = doc.createNestedObject("service_data");
+        service_data["brightness_step_pct"] = direction > 0 ? 10 : -10;
+        
+        String payload;
+        serializeJson(doc, payload);
+        _ws.sendTXT(payload);
+    }
+}
+
 void HomeAssistantManager::callSecureService(const String& domain, const String& service, const String& entity_id, const String& code) {
     if (!_isConnected || !_isAuthenticated) return;
 

@@ -6,7 +6,7 @@
 
 class FavoritesWidget : public HomeWidget {
 public:
-    FavoritesWidget(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle = nullptr);
+    FavoritesWidget(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle = nullptr, std::function<void(String, int)> onEntityAdjust = nullptr);
 
     void draw(DisplayManager& display) override;
     bool handleInput(KeyboardManager& keyboard) override;

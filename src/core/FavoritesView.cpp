@@ -14,8 +14,8 @@ void sortFavorites(std::vector<Entity>& entities, int sortMode) {
 }
 }
 
-FavoritesView::FavoritesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle, int topY)
-    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect), _onEntityToggle(onEntityToggle), _topY(topY), _scrollRepeater(config) {}
+FavoritesView::FavoritesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle, std::function<void(String, int)> onEntityAdjust, int topY)
+    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect), _onEntityToggle(onEntityToggle), _onEntityAdjust(onEntityAdjust), _topY(topY), _scrollRepeater(config), _valueRepeater(config) {}
 
 void FavoritesView::onEnter() {
     auto favIds = _config.getFavorites();
@@ -111,6 +111,14 @@ bool FavoritesView::handleInput(KeyboardManager& keyboard) {
         _selectedIndex++;
         if (_selectedIndex >= _scrollOffset + itemsPerPage) _scrollOffset++;
         handled = true;
+    } else {
+        int adjDir = _valueRepeater.updatePlusMinus(keyboard);
+        if (adjDir != 0) {
+            if (_onEntityAdjust) {
+                _onEntityAdjust(_cachedEntities[_selectedIndex].id, adjDir);
+            }
+            handled = true;
+        }
     }
     
     auto chars = keyboard.getNewChars();

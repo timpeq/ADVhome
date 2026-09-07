@@ -9,7 +9,7 @@
 
 class EntitiesView : public View {
 public:
-    EntitiesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle = nullptr);
+    EntitiesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle = nullptr, std::function<void(String, int)> onEntityAdjust = nullptr);
     
     void onEnter() override;
     void draw(DisplayManager& display) override;
@@ -20,12 +20,14 @@ private:
     ConfigManager& _config;
     std::function<void(String)> _onEntitySelect;
     std::function<void(String)> _onEntityToggle;
+    std::function<void(String, int)> _onEntityAdjust;
     
     std::vector<const Entity*> _cachedEntities;
     int _selectedIndex = 0;
     int _scrollOffset = 0;
     bool _subTabFocus = false;
     ScrollRepeater _scrollRepeater;
+    ScrollRepeater _valueRepeater;
     
     std::vector<String> _subTabs = {"Favorites", "All", "alarm_control_panel", "automation", "button", "climate", "cover", "fan", "input_boolean", "light", "lock", "media_player", "scene", "script", "sensor", "switch"};
     int _currentSubTab = 0;

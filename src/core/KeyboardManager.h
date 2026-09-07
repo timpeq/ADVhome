@@ -16,6 +16,8 @@ public:
     bool wasDownPressed() const;
     bool wasLeftPressed() const;
     bool wasRightPressed() const;
+    bool wasPlusPressed() const;
+    bool wasMinusPressed() const;
     bool wasLeftReleased() const;
     bool wasRightReleased() const;
     bool isUpHeld() const;
@@ -23,6 +25,8 @@ public:
     bool isLeftHeld() const;
     bool isRightHeld() const;
     bool isEnterHeld() const;
+    bool isPlusHeld() const;
+    bool isMinusHeld() const;
     bool isCharHeld(char character) const;
     
     // Returns any new character keys that were pressed this frame

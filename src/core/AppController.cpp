@@ -231,8 +231,13 @@ void AppController::updateHAConnected() {
             }
         };
         
-        _entitiesView = new EntitiesView(_entityManager, _config, onSelect, onToggle);
-        _homeView = new HomeView(_entityManager, _config, onSelect, onToggle);
+        auto onAdjust = [this](String entityId, int dir) {
+            _haManager->adjustEntity(entityId, dir);
+            _redraw = true;
+        };
+        
+        _entitiesView = new EntitiesView(_entityManager, _config, onSelect, onToggle, onAdjust);
+        _homeView = new HomeView(_entityManager, _config, onSelect, onToggle, onAdjust);
         _configView = new ConfigView(_config, *_diagView);
         
         auto onBack = [this]() {

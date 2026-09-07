@@ -112,3 +112,24 @@ bool KeyboardManager::isRightHeld() const {
     return _currentStatus.right ||
            std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '/') != _currentStatus.word.end();
 }
+
+bool KeyboardManager::wasPlusPressed() const {
+    return (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '+') != _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '+') == _lastStatus.word.end()) ||
+           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '=') != _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '=') == _lastStatus.word.end());
+}
+
+bool KeyboardManager::wasMinusPressed() const {
+    return (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '-') != _currentStatus.word.end() &&
+            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '-') == _lastStatus.word.end());
+}
+
+bool KeyboardManager::isPlusHeld() const {
+    return std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '+') != _currentStatus.word.end() ||
+           std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '=') != _currentStatus.word.end();
+}
+
+bool KeyboardManager::isMinusHeld() const {
+    return std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '-') != _currentStatus.word.end();
+}
