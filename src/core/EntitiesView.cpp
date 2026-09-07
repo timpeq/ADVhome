@@ -122,6 +122,7 @@ void EntitiesView::draw(DisplayManager& display) {
         
         // Scenes store their last-activated timestamp as state; keep the list compact.
         String displayState = entity->domain == "scene" ? "Scene" : entity->state;
+        displayState.replace("_", " ");
 
         // State on the right
         canvas->setCursor(165, y + (i * 15));
