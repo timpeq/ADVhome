@@ -33,15 +33,17 @@ void EntityDetailView::draw(DisplayManager& display) {
     }
     
     // Content
-    canvas->setCursor(4, 40);
+    canvas->setCursor(10, 40);
     canvas->setTextColor(TFT_WHITE);
+    
+    String dispState = entity.state;
+    dispState.replace("_", " ");
+    
     if (entity.domain == "scene") {
         canvas->print("Last run: ");
         canvas->setTextColor(TFT_YELLOW);
-        canvas->println(TextScroller::visible(entity.state, 28));
+        canvas->println(TextScroller::visible(dispState, 28));
     } else {
-        canvas->print("State: ");
-    
         if (entity.state == "on" || entity.state == "unlocked" || entity.state == "open" || entity.state == "playing") {
             canvas->setTextColor(TFT_GREEN);
         } else if (entity.state == "off" || entity.state == "locked" || entity.state == "closed" || entity.state == "paused" || entity.state == "idle") {
@@ -49,8 +51,14 @@ void EntityDetailView::draw(DisplayManager& display) {
         } else {
             canvas->setTextColor(TFT_YELLOW);
         }
-    
-        canvas->println(entity.state);
+        
+        if (entity.domain == "media_player") {
+            canvas->setCursor(30, 40); // Tastefully indented for media player
+            canvas->println(dispState);
+        } else {
+            canvas->print("State: ");
+            canvas->println(dispState);
+        }
     }
 
     if (entity.domain == "light") {
@@ -154,7 +162,7 @@ void EntityDetailView::draw(DisplayManager& display) {
         }
         
         // Controls help at bottom
-        canvas->setCursor(5, 123);
+        canvas->setCursor(10, 123);
         canvas->setTextColor(0x6B6D);
         canvas->print("ENT:Play +/-:Vol </>:Skip M:Mute");
     } else {
