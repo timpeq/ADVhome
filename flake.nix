@@ -26,6 +26,12 @@
             exit 1
           fi
           
+          echo "Waiting for device on /dev/ttyACM0 to become available (plug it in or reset)..."
+          while [ ! -e /dev/ttyACM0 ]; do
+            sleep 0.5
+          done
+          echo "Device found!"
+          
           # Run upload using the nix python3
           ${myPython}/bin/python3 "$ESPTOOL" --port /dev/ttyACM0 write_flash 0x5e0000 .pio/build/m5stack-stamps3/firmware.bin
           echo "Success! Please reset your device."
