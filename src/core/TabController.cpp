@@ -47,7 +47,7 @@ void TabController::prevTab() {
 
 void TabController::drawTabBar(DisplayManager& display, bool showBattery) {
     auto canvas = display.getCanvas();
-    canvas->fillRect(0, 0, 240, 20, 0x18E3); // Dark greyish blue
+    canvas->fillRect(0, 0, 240, 16, 0x18E3); // Dark greyish blue
     
     if (_tabs.size() == 0) return;
     
@@ -56,7 +56,7 @@ void TabController::drawTabBar(DisplayManager& display, bool showBattery) {
     
     for (size_t i = 0; i < _tabs.size(); i++) {
         if (i == (size_t)_currentTabIndex) {
-            canvas->fillRect(i * tabWidth, 0, tabWidth, 20, TFT_BLUE);
+            canvas->fillRect(i * tabWidth, 0, tabWidth, 16, TFT_BLUE);
             canvas->setTextColor(TFT_WHITE);
         } else {
             canvas->setTextColor(TFT_LIGHTGREY);
@@ -65,16 +65,16 @@ void TabController::drawTabBar(DisplayManager& display, bool showBattery) {
         
         // Center text roughly
         int textX = (i * tabWidth) + (tabWidth / 2) - (_tabs[i].name.length() * 3);
-        canvas->setCursor(textX, 6);
+        canvas->setCursor(textX, 4);
         canvas->print(_tabs[i].name);
     }
     
     if (showBattery) {
         int batLevel = M5.Power.getBatteryLevel();
-        canvas->fillRect(200, 0, 40, 20, 0x18E3);
+        canvas->fillRect(200, 0, 40, 16, 0x18E3);
         canvas->setTextColor(TFT_GREEN);
         canvas->setTextSize(1);
-        canvas->setCursor(210, 6);
+        canvas->setCursor(205, 4);
         canvas->print(String(batLevel) + "%");
     }
 }

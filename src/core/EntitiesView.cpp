@@ -3,7 +3,7 @@
 #include <algorithm>
 
 EntitiesView::EntitiesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect)
-    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect) {}
+    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect), _scrollRepeater(config) {}
 
 void EntitiesView::refreshCache() {
     _cachedEntities.clear();
@@ -128,17 +128,7 @@ bool EntitiesView::handleInput(KeyboardManager& keyboard) {
     
     auto chars = keyboard.getNewChars();
     for (char c : chars) {
-        if (c == '[') {
-            if (_currentSubTab > 0) _currentSubTab--;
-            else _currentSubTab = _subTabs.size() - 1;
-            refreshCache();
-            handled = true;
-        } else if (c == ']') {
-            if (_currentSubTab < (int)_subTabs.size() - 1) _currentSubTab++;
-            else _currentSubTab = 0;
-            refreshCache();
-            handled = true;
-        } else if (c == 'f' || c == 'F' || c == '*') {
+        if (c == 'f' || c == 'F' || c == '*') {
             if (!_cachedEntities.empty()) {
                 String id = _cachedEntities[_selectedIndex]->id;
                 if (_config.isFavorite(id)) {
@@ -172,49 +162,75 @@ bool EntitiesView::handleInput(KeyboardManager& keyboard) {
     
     if (handled) return true;
     
-    if (_cachedEntities.empty()) return false;
-    
-    int scrollStyle = _config.getScrollStyle();
+    if (_subTabFocus) {
+        if (keyboard.wasLeftPressed()) {
+            if (_currentSubTab > 0) _currentSubTab--;
+            else _currentSubTab = _subTabs.size() - 1;
+            refreshCache();
+            handled = true;
+        } else if (keyboard.wasRightPressed()) {
+            if (_currentSubTab < (int)_subTabs.size() - 1) _currentSubTab++;
+            else _currentSubTab = 0;
+            refreshCache();
+            handled = true;
+        } else if (keyboard.wasDownPressed()) {
+            _subTabFocus = false;
+            handled = true;
+        }
+        return handled;
+    }
+
+    if (_cachedEntities.empty()) {
+        if (keyboard.wasLeftPressed()) {
+            if (_currentSubTab > 0) _currentSubTab--;
+            else _currentSubTab = _subTabs.size() - 1;
+            refreshCache();
+            _subTabFocus = true;
+            return true;
+        }
+        if (keyboard.wasRightPressed()) {
+            if (_currentSubTab < (int)_subTabs.size() - 1) _currentSubTab++;
+            else _currentSubTab = 0;
+            refreshCache();
+            _subTabFocus = true;
+            return true;
+        }
+        return false;
+    }
+
     int itemsPerPage = (135 - 37) / 15;
-    
-    if (keyboard.wasUpPressed() || (scrollStyle == 0 && keyboard.wasLeftPressed())) {
-        if (_selectedIndex > 0) {
+
+    auto moveSelection = [&](int direction) {
+        if (direction < 0 && _selectedIndex > 0) {
             _selectedIndex--;
-            if (_selectedIndex < _scrollOffset) {
-                _scrollOffset--;
-            }
-        }
-        handled = true;
-    }
-    
-    if (keyboard.wasDownPressed() || (scrollStyle == 0 && keyboard.wasRightPressed())) {
-        if (_selectedIndex < (int)_cachedEntities.size() - 1) {
+            if (_selectedIndex < _scrollOffset) _scrollOffset--;
+        } else if (direction > 0 && _selectedIndex < (int)_cachedEntities.size() - 1) {
             _selectedIndex++;
-            if (_selectedIndex >= _scrollOffset + itemsPerPage) {
-                _scrollOffset++;
-            }
+            if (_selectedIndex >= _scrollOffset + itemsPerPage) _scrollOffset++;
         }
+    };
+
+    if (keyboard.wasLeftPressed()) {
+        if (_currentSubTab > 0) _currentSubTab--;
+        else _currentSubTab = _subTabs.size() - 1;
+        refreshCache();
+        _subTabFocus = true;
         handled = true;
-    }
-    
-    if (scrollStyle == 1 && keyboard.wasLeftPressed()) {
-        if (_selectedIndex > 0) {
-            _selectedIndex -= itemsPerPage;
-            if (_selectedIndex < 0) _selectedIndex = 0;
-            if (_selectedIndex < _scrollOffset) _scrollOffset = _selectedIndex;
+    } else if (keyboard.wasRightPressed()) {
+        if (_currentSubTab < (int)_subTabs.size() - 1) _currentSubTab++;
+        else _currentSubTab = 0;
+        refreshCache();
+        _subTabFocus = true;
+        handled = true;
+    } else {
+        int direction = _scrollRepeater.update(keyboard);
+        if (direction < 0 && _selectedIndex == 0) {
+            _subTabFocus = true;
+            handled = true;
+        } else if (direction != 0) {
+            moveSelection(direction);
+            handled = true;
         }
-        handled = true;
-    }
-    
-    if (scrollStyle == 1 && keyboard.wasRightPressed()) {
-        if (_selectedIndex < (int)_cachedEntities.size() - 1) {
-            _selectedIndex += itemsPerPage;
-            if (_selectedIndex >= (int)_cachedEntities.size()) _selectedIndex = _cachedEntities.size() - 1;
-            if (_selectedIndex >= _scrollOffset + itemsPerPage) {
-                _scrollOffset = _selectedIndex - itemsPerPage + 1;
-            }
-        }
-        handled = true;
     }
     
     if (keyboard.wasEnterPressed()) {

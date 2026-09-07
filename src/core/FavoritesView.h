@@ -4,6 +4,7 @@
 #include "View.h"
 #include "EntityManager.h"
 #include "ConfigManager.h"
+#include "ScrollRepeater.h"
 #include <functional>
 
 class FavoritesView : public View {
@@ -22,6 +23,7 @@ private:
     std::vector<Entity> _cachedEntities;
     int _selectedIndex = 0;
     int _scrollOffset = 0;
+    ScrollRepeater _scrollRepeater;
     
     String _searchPrefix = "";
     uint32_t _lastSearchTime = 0;

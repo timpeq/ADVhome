@@ -3,11 +3,13 @@
 
 #include "View.h"
 #include "ConfigManager.h"
+#include "DiagnosticView.h"
+#include "ScrollRepeater.h"
 #include <vector>
 
 class ConfigView : public View {
 public:
-    ConfigView(ConfigManager& config);
+    ConfigView(ConfigManager& config, DiagnosticView& diagnosticView);
     
     void onEnter() override;
     void draw(DisplayManager& display) override;
@@ -15,6 +17,7 @@ public:
 
 private:
     ConfigManager& _config;
+    DiagnosticView& _diagnosticView;
     
     struct Setting {
         String name;
@@ -26,9 +29,12 @@ private:
     
     // Temporary variables for drawing
     bool _showBattery;
+    bool _showDiagnostics = false;
     int _reconInt;
     int _backStyle;
-    int _scrollStyle;
+    int _scrollDelay;
+    int _scrollSpeed;
+    ScrollRepeater _scrollRepeater;
     
     void refreshValues();
     void toggleCurrent();

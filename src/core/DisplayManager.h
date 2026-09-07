@@ -20,6 +20,7 @@ public:
     void drawPasswordInput(const String& title, const String& subtitle, const String& currentInput);
     void drawHASetup(const String& ipAddress);
     void drawDiagPage(const String& ipAddress, const String& haUrl, const String& haVersion);
+    void drawBatteryIndicator();
     
     // Direct canvas access for custom drawing if needed
     M5Canvas* getCanvas() { return &_canvas; }

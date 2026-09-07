@@ -19,6 +19,7 @@ void EntityDetailView::draw(DisplayManager& display) {
     canvas->setCursor(5, 5);
     canvas->print("< Bksp ");
     canvas->print(entity.domain);
+    display.drawBatteryIndicator();
     
     // Content
     canvas->setCursor(4, 24);

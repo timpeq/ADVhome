@@ -46,6 +46,10 @@ public:
     // 0 = Left/Right scrolls 1 item, 1 = Left/Right pages up/down
     int getScrollStyle();
     void setScrollStyle(int style);
+    int getScrollDelay();
+    void setScrollDelay(int ms);
+    int getScrollSpeed();
+    void setScrollSpeed(int ms);
     
 private:
     Preferences _prefs;

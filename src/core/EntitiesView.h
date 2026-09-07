@@ -4,6 +4,7 @@
 #include "View.h"
 #include "EntityManager.h"
 #include "ConfigManager.h"
+#include "ScrollRepeater.h"
 #include <functional>
 
 class EntitiesView : public View {
@@ -22,6 +23,8 @@ private:
     std::vector<const Entity*> _cachedEntities;
     int _selectedIndex = 0;
     int _scrollOffset = 0;
+    bool _subTabFocus = false;
+    ScrollRepeater _scrollRepeater;
     
     std::vector<String> _subTabs = {"All", "light", "switch", "climate", "fan", "cover", "media_player", "script", "lock", "automation", "input_boolean", "scene", "button"};
     int _currentSubTab = 0;

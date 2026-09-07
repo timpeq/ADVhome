@@ -127,3 +127,19 @@ int ConfigManager::getScrollStyle() {
 void ConfigManager::setScrollStyle(int style) {
     _prefs.putInt("scroll_sty", style);
 }
+
+int ConfigManager::getScrollDelay() {
+    return _prefs.getInt("scroll_delay", 500);
+}
+
+void ConfigManager::setScrollDelay(int ms) {
+    _prefs.putInt("scroll_delay", ms);
+}
+
+int ConfigManager::getScrollSpeed() {
+    return _prefs.getInt("scroll_speed", 100);
+}
+
+void ConfigManager::setScrollSpeed(int ms) {
+    _prefs.putInt("scroll_speed", ms);
+}

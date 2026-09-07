@@ -15,6 +15,8 @@ public:
     bool wasDownPressed() const;
     bool wasLeftPressed() const;
     bool wasRightPressed() const;
+    bool isUpHeld() const;
+    bool isDownHeld() const;
     
     // Returns any new character keys that were pressed this frame
     std::vector<char> getNewChars() const;

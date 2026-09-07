@@ -65,3 +65,13 @@ bool KeyboardManager::wasRightPressed() const {
            (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '/') != _currentStatus.word.end() &&
             std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '/') == _lastStatus.word.end());
 }
+
+bool KeyboardManager::isUpHeld() const {
+    return _currentStatus.up ||
+           std::find(_currentStatus.word.begin(), _currentStatus.word.end(), ';') != _currentStatus.word.end();
+}
+
+bool KeyboardManager::isDownHeld() const {
+    return _currentStatus.down ||
+           std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '.') != _currentStatus.word.end();
+}

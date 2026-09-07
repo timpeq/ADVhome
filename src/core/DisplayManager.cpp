@@ -25,6 +25,7 @@ void DisplayManager::drawMessage(const String& title, const String& message, uin
     _canvas.setTextColor(TFT_WHITE);
     _canvas.setTextSize(1);
     _canvas.println(message);
+    drawBatteryIndicator();
     push();
 }
 
@@ -48,6 +49,7 @@ void DisplayManager::drawMenu(const String& title, const std::vector<String>& it
         _canvas.setCursor(5, 32 + i * 15);
         _canvas.println(items[idx]);
     }
+    drawBatteryIndicator();
     push();
 }
 
@@ -72,6 +74,7 @@ void DisplayManager::drawPasswordInput(const String& title, const String& subtit
     if ((millis() / 500) % 2 == 0) {
         _canvas.print("_");
     }
+    drawBatteryIndicator();
     push();
 }
 
@@ -93,6 +96,7 @@ void DisplayManager::drawHASetup(const String& ipAddress) {
     String url = "http://" + ipAddress;
     // Draw QR on the right side of the screen
     _canvas.qrcode(url.c_str(), 140, 20, 90, 2);
+    drawBatteryIndicator();
     push();
 }
 
@@ -121,5 +125,15 @@ void DisplayManager::drawDiagPage(const String& ipAddress, const String& haUrl, 
     _canvas.setTextColor(TFT_GREEN);
     _canvas.println(haVersion);
     
+    drawBatteryIndicator();
     push();
+}
+
+void DisplayManager::drawBatteryIndicator() {
+    int batteryLevel = M5.Power.getBatteryLevel();
+    _canvas.fillRect(200, 0, 40, 16, TFT_BLACK);
+    _canvas.setTextColor(TFT_GREEN);
+    _canvas.setTextSize(1);
+    _canvas.setCursor(205, 4);
+    _canvas.print(String(batteryLevel) + "%");
 }

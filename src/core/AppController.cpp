@@ -227,7 +227,7 @@ void AppController::updateHAConnected() {
         
         _entitiesView = new EntitiesView(_entityManager, _config, onSelect);
         _favoritesView = new FavoritesView(_entityManager, _config, onSelect);
-        _configView = new ConfigView(_config);
+        _configView = new ConfigView(_config, *_diagView);
         
         auto onBack = [this]() {
             _isDetailViewActive = false;
@@ -243,7 +243,6 @@ void AppController::updateHAConnected() {
         _tabController.addView(_favoritesView, "Favs");
         _tabController.addView(_entitiesView, "Entities");
         _tabController.addView(_configView, "Config");
-        _tabController.addView(_diagView, "Diag");
     }
     
     bool wasDetailActive = _isDetailViewActive;
