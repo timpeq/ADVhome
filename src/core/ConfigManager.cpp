@@ -157,6 +157,22 @@ void ConfigManager::setTtsEnabled(bool enabled) {
     _prefs.putBool("ttsEnabled", enabled);
 }
 
+int ConfigManager::getTtsVolume() {
+    return _prefs.getInt("ttsVol", 80);
+}
+
+void ConfigManager::setTtsVolume(int pct) {
+    _prefs.putInt("ttsVol", constrain(pct, 0, 100));
+}
+
+bool ConfigManager::getTtsDebug() {
+    return _prefs.getBool("ttsDebug", false);
+}
+
+void ConfigManager::setTtsDebug(bool on) {
+    _prefs.putBool("ttsDebug", on);
+}
+
 String ConfigManager::getVoicePipelineId() {
     return _prefs.getString("voicePipeId", "");
 }

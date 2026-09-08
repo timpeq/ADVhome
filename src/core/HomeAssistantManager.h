@@ -107,6 +107,7 @@ private:
     String plainHttpBase() const;
     String requestWavTtsUrl(const String& text);
     void processVoiceResponse();
+    void ttsDiag(const String& s); // serial always; chat log only when TTS Debug is on
     bool startTtsWavStream(const String& url);
     bool parseWavHeader();
     void pumpTtsWavStream();

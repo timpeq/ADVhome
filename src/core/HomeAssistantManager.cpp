@@ -219,7 +219,7 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                     if (eventType == "run-start") {
                         _voiceBinaryHandlerId = eventData["runner_data"]["stt_binary_handler_id"] | -1;
                         Serial.println("[HA] Voice audio handler: " + String(_voiceBinaryHandlerId));
-                        if (_voiceCallback) _voiceCallback("Voice: listening");
+                        if (_voiceCallback) _voiceCallback("Listening");
                     } else if (eventType == "stt-end") {
                         String transcript = eventData["stt_output"]["text"] | "";
                         if (!transcript.isEmpty() && _voiceCallback) {
@@ -243,7 +243,7 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                     } else if (eventType == "intent-start") {
                         String input = eventData["intent_input"] | "";
                         Serial.println("[HA] Voice intent input: " + input);
-                        if (_voiceCallback) _voiceCallback("Voice: thinking");
+                        if (_voiceCallback) _voiceCallback("Thinking");
                     } else if (eventType == "error") {
                         String errorMessage = eventData["message"] | "Voice pipeline failed";
                         bool staleNoTextError = errorMessage.indexOf("text recognized") >= 0;
@@ -254,7 +254,8 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                         _voiceBinaryHandlerId = -1;
                         _voiceRunFinished = true;
                         _voiceRequestId = 0;
-                        if (_voiceCallback) _voiceCallback("Voice: finished");
+                        // Clear the status line unless TTS playback is about to start.
+                        if (_voiceCallback && _pendingTtsText.isEmpty()) _voiceCallback("");
                     }
                 }
                 else if (msgType == "result" && doc["id"] == 1 && doc["success"]) {
@@ -380,8 +381,13 @@ bool HomeAssistantManager::startVoicePipeline() {
     String payload;
     serializeJson(doc, payload);
     _ws.sendTXT(payload);
-    if (_voiceCallback) _voiceCallback("Voice: starting");
+    if (_voiceCallback) _voiceCallback("Listening");
     return true;
+}
+
+void HomeAssistantManager::ttsDiag(const String& s) {
+    Serial.println("[HA] TTS " + s);
+    if (_voiceCallback && _config.getTtsDebug()) _voiceCallback("TTS: " + s);
 }
 
 void HomeAssistantManager::requestPipelineList() {
@@ -494,7 +500,7 @@ String HomeAssistantManager::requestWavTtsUrl(const String& text) {
         return String();
     }
     Serial.println("[HA] TTS engine=" + engine + " url=" + base + path);
-    if (_voiceCallback) _voiceCallback("TTS: " + engine + " -> " + path);
+    ttsDiag(engine + " -> " + path);
     return base + path;
 }
 
@@ -507,7 +513,7 @@ void HomeAssistantManager::processVoiceResponse() {
     _pendingTtsText = "";
 
     if (!_config.getTtsEnabled()) {
-        if (_voiceCallback) _voiceCallback("Voice: finished");
+        if (_voiceCallback) _voiceCallback("");
         return;
     }
 
@@ -517,7 +523,7 @@ void HomeAssistantManager::processVoiceResponse() {
         return;
     }
 
-    if (_voiceCallback) _voiceCallback("TTS: synthesising");
+    if (_voiceCallback) _voiceCallback("Speaking");
 
     // Free the wss WebSocket's TLS buffers before the HTTP client + PCM buffers;
     // reconnected in stopVoicePlayback() once playback ends.
@@ -564,9 +570,11 @@ bool HomeAssistantManager::startTtsWavStream(const String& url) {
     int code = _ttsHttp->GET();
     int contentLen = _ttsHttp->getSize();
     String ctype = _ttsHttp->header("Content-Type");
-    Serial.printf("[HA] TTS HTTP %d, len %d, type %s\n", code, contentLen, ctype.c_str());
-    if (_voiceCallback) _voiceCallback("TTS: HTTP " + String(code) + " " + ctype + " len " + String(contentLen));
-    if (code != HTTP_CODE_OK) return false;
+    ttsDiag("HTTP " + String(code) + " " + ctype + " len " + String(contentLen));
+    if (code != HTTP_CODE_OK) {
+        if (_voiceCallback) _voiceCallback("Error: TTS fetch HTTP " + String(code));
+        return false;
+    }
 
     if (!parseWavHeader()) {
         String hex;
@@ -589,9 +597,10 @@ bool HomeAssistantManager::startTtsWavStream(const String& url) {
     M5.Mic.end();
     M5.Speaker.end();
     M5.Speaker.begin();
-    // M5Unified squares the volume in its gain math, so keep this near the
-    // library default (64) -- higher values clip full-scale PCM into a fizz.
-    M5.Speaker.setVolume(72);
+    // M5Unified squares the volume in its gain math, so map the 0-100 setting
+    // onto 0-90 -- past ~90 full-scale PCM clips into a fizz.
+    uint8_t master = (uint8_t)(constrain(_config.getTtsVolume(), 0, 100) * 90 / 100);
+    M5.Speaker.setVolume(master);
     M5.Speaker.setChannelVolume(kTtsChannel, 255);
     M5.Speaker.stop(kTtsChannel);
 
@@ -608,7 +617,7 @@ bool HomeAssistantManager::startTtsWavStream(const String& url) {
     _ttsPlaying = true;
     _ttsLastRxMs = millis();
     _ttsDeadline = millis() + 60000;
-    if (_voiceCallback) _voiceCallback("TTS: playing " + String(_ttsRate) + "Hz");
+    ttsDiag("playing " + String(_ttsRate) + "Hz");
     return true;
 }
 
@@ -666,7 +675,7 @@ bool HomeAssistantManager::parseWavHeader() {
 void HomeAssistantManager::pumpTtsWavStream() {
     if (millis() > _ttsDeadline) {
         Serial.println("[HA] TTS deadline hit");
-        if (_voiceCallback) _voiceCallback("TTS: cut " + String(_ttsFedBytes / 1024) + "K");
+        if (_voiceCallback) _voiceCallback("Error: TTS timed out");
         stopVoicePlayback();
         return;
     }
@@ -712,7 +721,8 @@ void HomeAssistantManager::pumpTtsWavStream() {
     bool channelActive = (M5.Speaker.isPlaying() & (1u << kTtsChannel)) != 0;
     if (streamDone && _ttsFillLen < 2 && !channelActive) {
         Serial.printf("[HA] TTS finished, fed %u PCM bytes\n", _ttsFedBytes);
-        if (_voiceCallback) _voiceCallback("TTS: done " + String(_ttsFedBytes / 1024) + "K");
+        ttsDiag("done " + String(_ttsFedBytes / 1024) + "K");
+        if (_voiceCallback) _voiceCallback("");
         stopVoicePlayback();
     }
 }

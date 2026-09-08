@@ -18,7 +18,9 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, Ho
     _settings.push_back({"Deep Sleep T/O", 14});
     _settings.push_back({"ESC for Sleep", 15});
     _settings.push_back({"TTS Playback", 17});
+    _settings.push_back({"TTS Volume", 19});
     _settings.push_back({"Voice Pipeline", 18});
+    _settings.push_back({"TTS Debug", 20});
     _settings.push_back({"Diagnostics", 4});
 }
 
@@ -39,6 +41,8 @@ void ConfigView::refreshValues() {
     _deepSleepTO = _config.getDeepSleepTimeout();
     _escDeepSleep = _config.getEscDeepSleep();
     _ttsEnabled = _config.getTtsEnabled();
+    _ttsVolume = _config.getTtsVolume();
+    _ttsDebug = _config.getTtsDebug();
     _voicePipelineName = _config.getVoicePipelineName();
 }
 
@@ -127,6 +131,12 @@ void ConfigView::draw(DisplayManager& display) {
             if (label.length() > 14) label = label.substring(0, 12) + "..";
             canvas->print(label);
             canvas->setTextColor(_voicePipelineName.isEmpty() ? TFT_LIGHTGREY : TFT_CYAN);
+        } else if (_settings[i].type == 19) {
+            canvas->print(String(_ttsVolume) + "%");
+            canvas->setTextColor(TFT_YELLOW);
+        } else if (_settings[i].type == 20) {
+            canvas->print(_ttsDebug ? "ON" : "OFF");
+            canvas->setTextColor(_ttsDebug ? TFT_GREEN : TFT_LIGHTGREY);
         }
     }
 }
@@ -202,6 +212,13 @@ void ConfigView::toggleCurrent() {
     } else if (_settings[_selectedIndex].type == 17) {
         _ttsEnabled = !_ttsEnabled;
         _config.setTtsEnabled(_ttsEnabled);
+    } else if (_settings[_selectedIndex].type == 19) {
+        _ttsVolume += 10;
+        if (_ttsVolume > 100) _ttsVolume = 0;
+        _config.setTtsVolume(_ttsVolume);
+    } else if (_settings[_selectedIndex].type == 20) {
+        _ttsDebug = !_ttsDebug;
+        _config.setTtsDebug(_ttsDebug);
     } else if (_settings[_selectedIndex].type == 18) {
         // Cycle: Default -> pipeline 0 -> pipeline 1 -> ... -> Default
         const auto& pipes = _haManager.getPipelines();

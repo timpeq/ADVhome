@@ -51,6 +51,12 @@ public:
     bool getTtsEnabled();
     void setTtsEnabled(bool enabled);
 
+    int getTtsVolume();          // 0-100 (percent)
+    void setTtsVolume(int pct);
+
+    bool getTtsDebug();
+    void setTtsDebug(bool on);
+
     String getVoicePipelineId();
     String getVoicePipelineName();
     void setVoicePipeline(const String& id, const String& name);

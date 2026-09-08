@@ -50,6 +50,8 @@ private:
     int _deepSleepTO;
     bool _escDeepSleep;
     bool _ttsEnabled;
+    int _ttsVolume;
+    bool _ttsDebug;
     String _voicePipelineName;
     ScrollRepeater _scrollRepeater;
     

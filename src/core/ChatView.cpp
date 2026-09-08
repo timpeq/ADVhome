@@ -17,7 +17,10 @@ void ChatView::receiveResponse(const String& response) {
 }
 
 void ChatView::receiveVoiceEvent(const String& event) {
+    // Empty event = clear the transient status line (turn finished).
     _voiceStatus = event;
+    // Conversation turns and errors are kept in the log; the "TTS:" diagnostic
+    // lines only arrive at all when the TTS Debug setting is on.
     if (event.startsWith("You:") || event.startsWith("HA:") || event.startsWith("Error:") ||
         event.startsWith("TTS:")) {
         addMessage(event);
