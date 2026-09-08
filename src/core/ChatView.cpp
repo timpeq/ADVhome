@@ -18,7 +18,8 @@ void ChatView::receiveResponse(const String& response) {
 
 void ChatView::receiveVoiceEvent(const String& event) {
     _voiceStatus = event;
-    if (event.startsWith("You:") || event.startsWith("HA:") || event.startsWith("Error:")) {
+    if (event.startsWith("You:") || event.startsWith("HA:") || event.startsWith("Error:") ||
+        event.startsWith("TTS:")) {
         addMessage(event);
     }
 }
@@ -52,6 +53,9 @@ void ChatView::stopVoiceRecording() {
     Serial.println("[VOICE] Finishing microphone capture");
     _homeAssistant.finishVoicePipeline();
     _voiceRecording = false;
+    // Release the mic: on CardputerADV it shares the I2S BCK/WS pins and the
+    // ES8311 codec with the speaker, so TTS playback needs it fully stopped.
+    M5.Mic.end();
     Serial.println("[VOICE] Microphone stopped");
 }
 

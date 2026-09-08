@@ -238,7 +238,7 @@ void AppController::updateHAConnected() {
         
         _entitiesView = new EntitiesView(_entityManager, _config, onSelect, onToggle, onAdjust);
         _homeView = new HomeView(_entityManager, _config, onSelect, onToggle, onAdjust);
-        _configView = new ConfigView(_config, *_diagView, [this]() {
+        _configView = new ConfigView(_config, *_diagView, *_haManager, [this]() {
             _tabController.setViewVisible(_chatView, _config.getShowChat());
             _redraw = true;
         });
@@ -249,6 +249,9 @@ void AppController::updateHAConnected() {
         });
         _haManager->setVoiceCallback([this](const String& event) {
             _chatView->receiveVoiceEvent(event);
+            _redraw = true;
+        });
+        _haManager->setPipelinesCallback([this]() {
             _redraw = true;
         });
         

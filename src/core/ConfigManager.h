@@ -50,7 +50,11 @@ public:
     
     bool getTtsEnabled();
     void setTtsEnabled(bool enabled);
-    
+
+    String getVoicePipelineId();
+    String getVoicePipelineName();
+    void setVoicePipeline(const String& id, const String& name);
+
     int getDisplayBrightness();
     void setDisplayBrightness(int brightness);
     

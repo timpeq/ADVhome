@@ -4,13 +4,14 @@
 #include "View.h"
 #include "ConfigManager.h"
 #include "DiagnosticView.h"
+#include "HomeAssistantManager.h"
 #include "ScrollRepeater.h"
 #include <vector>
 #include <functional>
 
 class ConfigView : public View {
 public:
-    ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, std::function<void()> onSettingsChanged = nullptr);
+    ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, HomeAssistantManager& haManager, std::function<void()> onSettingsChanged = nullptr);
     
     void onEnter() override;
     void draw(DisplayManager& display) override;
@@ -19,6 +20,7 @@ public:
 private:
     ConfigManager& _config;
     DiagnosticView& _diagnosticView;
+    HomeAssistantManager& _haManager;
     std::function<void()> _onSettingsChanged;
     
     struct Setting {
@@ -48,6 +50,7 @@ private:
     int _deepSleepTO;
     bool _escDeepSleep;
     bool _ttsEnabled;
+    String _voicePipelineName;
     ScrollRepeater _scrollRepeater;
     
     void refreshValues();

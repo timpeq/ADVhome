@@ -9,14 +9,22 @@
 #include <functional>
 #include <vector>
 
-class AudioFileSource;
-class AudioGenerator;
-class AudioOutputI2S;
+class HTTPClient;
+class WiFiClient;
 
 class HomeAssistantManager {
 public:
     using ConversationCallback = std::function<void(const String&)>;
     using VoiceCallback = std::function<void(const String&)>;
+    using PipelinesCallback = std::function<void()>;
+
+    struct VoicePipeline {
+        String id;
+        String name;
+        String ttsEngine;
+        String ttsVoice;
+        String ttsLanguage;
+    };
 
     HomeAssistantManager(ConfigManager& config, EntityManager& entityManager);
     
@@ -36,10 +44,14 @@ public:
     bool startVoicePipeline();
     void sendVoiceAudio(const int16_t* samples, size_t sampleCount);
     void finishVoicePipeline();
-    void queueVoiceResponse(const String& url, const String& mimeType);
     bool isVoiceReady() const { return _voiceBinaryHandlerId >= 0; }
     void setVoiceCallback(VoiceCallback callback) { _voiceCallback = callback; }
-    
+
+    void requestPipelineList();
+    const std::vector<VoicePipeline>& getPipelines() const { return _pipelines; }
+    String getPreferredPipelineId() const { return _preferredPipelineId; }
+    void setPipelinesCallback(PipelinesCallback callback) { _pipelinesCallback = callback; }
+
     bool isConnected() const { return _isConnected; }
     bool isAuthenticated() const { return _isAuthenticated; }
     bool isTtsTransitioning() const { return _ttsTransitioning; }
@@ -61,19 +73,45 @@ private:
     int _voiceBinaryHandlerId = -1;
     std::vector<uint8_t> _voicePacket;
     VoiceCallback _voiceCallback;
-    String _ttsUrl;
-    String _ttsMimeType;
-    bool _ttsPending = false;
+    uint32_t _pipelineListRequestId = 0;
+    std::vector<VoicePipeline> _pipelines;
+    String _preferredPipelineId;
+    PipelinesCallback _pipelinesCallback;
+    String _pendingTtsText; // conversation reply awaiting our own WAV synthesis
     bool _ttsTransitioning = false;
     bool _voiceRunFinished = false;
     bool _voiceReceivedText = false;
-    AudioFileSource* _ttsSource = nullptr;
-    AudioGenerator* _ttsGenerator = nullptr;
-    AudioOutputI2S* _ttsOutput = nullptr;
-    
+
+    // TTS WAV playback: stream the HA tts_proxy WAV over plain HTTP and feed the
+    // PCM straight to M5.Speaker (which owns the CardputerADV ES8311 codec).
+    static constexpr int kTtsChannel = 7;
+    static constexpr size_t kTtsChunkBytes = 6144; // ~140 ms mono @ 22 kHz
+    static constexpr size_t kTtsMinSubmit = 2048;  // don't queue fragments smaller than this unless draining
+    static constexpr int kTtsBufCount = 5;         // M5.Speaker holds <=3 (2 queued + 1 playing); extra margin
+    HTTPClient* _ttsHttp = nullptr;
+    WiFiClient* _ttsClient = nullptr;
+    uint8_t* _ttsChunks[kTtsBufCount] = {nullptr};
+    int _ttsChunkIdx = 0;
+    size_t _ttsFillLen = 0; // bytes accumulated in _ttsChunks[_ttsChunkIdx], not yet queued
+    bool _ttsPlaying = false;
+    uint32_t _ttsRate = 22050;
+    bool _ttsStereo = false;
+    uint32_t _ttsFedBytes = 0;
+    uint32_t _ttsDeadline = 0;
+    uint32_t _ttsLastRxMs = 0;
+    uint8_t _ttsSniff[16] = {0};
+    size_t _ttsSniffLen = 0;
+
     void webSocketEvent(WStype_t type, uint8_t * payload, size_t length);
+    const VoicePipeline* activePipeline() const;
+    String plainHttpBase() const;
+    String requestWavTtsUrl(const String& text);
     void processVoiceResponse();
+    bool startTtsWavStream(const String& url);
+    bool parseWavHeader();
+    void pumpTtsWavStream();
     void stopVoicePlayback();
+    void freeTtsResources();
     void resetWebSocket();
 };
 

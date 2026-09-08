@@ -1,7 +1,7 @@
 #include "ConfigView.h"
 
-ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, std::function<void()> onSettingsChanged)
-    : _config(config), _diagnosticView(diagnosticView), _onSettingsChanged(onSettingsChanged), _scrollRepeater(config) {
+ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, HomeAssistantManager& haManager, std::function<void()> onSettingsChanged)
+    : _config(config), _diagnosticView(diagnosticView), _haManager(haManager), _onSettingsChanged(onSettingsChanged), _scrollRepeater(config) {
     _settings.push_back({"Battery % in Tab Bar", 0});
     _settings.push_back({"Hide Unavailable on Home", 9});
     _settings.push_back({"Show Chat Tab", 16});
@@ -18,6 +18,7 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, st
     _settings.push_back({"Deep Sleep T/O", 14});
     _settings.push_back({"ESC for Sleep", 15});
     _settings.push_back({"TTS Playback", 17});
+    _settings.push_back({"Voice Pipeline", 18});
     _settings.push_back({"Diagnostics", 4});
 }
 
@@ -38,6 +39,7 @@ void ConfigView::refreshValues() {
     _deepSleepTO = _config.getDeepSleepTimeout();
     _escDeepSleep = _config.getEscDeepSleep();
     _ttsEnabled = _config.getTtsEnabled();
+    _voicePipelineName = _config.getVoicePipelineName();
 }
 
 void ConfigView::onEnter() {
@@ -120,6 +122,11 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 17) {
             canvas->print(_ttsEnabled ? "ON" : "OFF");
             canvas->setTextColor(_ttsEnabled ? TFT_GREEN : TFT_LIGHTGREY);
+        } else if (_settings[i].type == 18) {
+            String label = _voicePipelineName.isEmpty() ? String("Default") : _voicePipelineName;
+            if (label.length() > 14) label = label.substring(0, 12) + "..";
+            canvas->print(label);
+            canvas->setTextColor(_voicePipelineName.isEmpty() ? TFT_LIGHTGREY : TFT_CYAN);
         }
     }
 }
@@ -195,6 +202,22 @@ void ConfigView::toggleCurrent() {
     } else if (_settings[_selectedIndex].type == 17) {
         _ttsEnabled = !_ttsEnabled;
         _config.setTtsEnabled(_ttsEnabled);
+    } else if (_settings[_selectedIndex].type == 18) {
+        // Cycle: Default -> pipeline 0 -> pipeline 1 -> ... -> Default
+        const auto& pipes = _haManager.getPipelines();
+        String currentId = _config.getVoicePipelineId();
+        int current = -1; // -1 == Default
+        for (size_t i = 0; i < pipes.size(); i++) {
+            if (pipes[i].id == currentId) { current = (int)i; break; }
+        }
+        int next = current + 1;
+        if (next >= (int)pipes.size()) {
+            _config.setVoicePipeline("", "");
+            _voicePipelineName = "";
+        } else {
+            _config.setVoicePipeline(pipes[next].id, pipes[next].name);
+            _voicePipelineName = pipes[next].name;
+        }
     }
 }
 
