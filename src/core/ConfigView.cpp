@@ -5,6 +5,7 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, Ho
     _settings.push_back({"Battery % in Tab Bar", 0});
     _settings.push_back({"Hide Unavailable on Home", 9});
     _settings.push_back({"Show Chat Tab", 16});
+    _settings.push_back({"GO Btn to Chat", 21});
     _settings.push_back({"Favorites Sort", 2});
     _settings.push_back({"Reconnect Interval", 1});
     _settings.push_back({"Scroll Start Delay", 5});
@@ -43,6 +44,7 @@ void ConfigView::refreshValues() {
     _ttsEnabled = _config.getTtsEnabled();
     _ttsVolume = _config.getTtsVolume();
     _ttsDebug = _config.getTtsDebug();
+    _goToChat = _config.getGoButtonToChat();
     _voicePipelineName = _config.getVoicePipelineName();
 }
 
@@ -137,6 +139,9 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 20) {
             canvas->print(_ttsDebug ? "ON" : "OFF");
             canvas->setTextColor(_ttsDebug ? TFT_GREEN : TFT_LIGHTGREY);
+        } else if (_settings[i].type == 21) {
+            canvas->print(_goToChat ? "YES" : "NO");
+            canvas->setTextColor(_goToChat ? TFT_GREEN : TFT_LIGHTGREY);
         }
     }
 }
@@ -219,6 +224,9 @@ void ConfigView::toggleCurrent() {
     } else if (_settings[_selectedIndex].type == 20) {
         _ttsDebug = !_ttsDebug;
         _config.setTtsDebug(_ttsDebug);
+    } else if (_settings[_selectedIndex].type == 21) {
+        _goToChat = !_goToChat;
+        _config.setGoButtonToChat(_goToChat);
     } else if (_settings[_selectedIndex].type == 18) {
         // Cycle: Default -> pipeline 0 -> pipeline 1 -> ... -> Default
         const auto& pipes = _haManager.getPipelines();

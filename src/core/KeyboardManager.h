@@ -26,6 +26,9 @@ public:
     bool isRightHeld() const;
     bool isEnterHeld() const;
     bool isGoHeld() const;
+    bool wasGoPressed() const;
+    // When false, a short press of the GO (top) button no longer aliases Enter.
+    void setGoActsAsEnter(bool v) { _goActsAsEnter = v; }
     bool isPlusHeld() const;
     bool isMinusHeld() const;
     bool isCtrlHeld() const;
@@ -40,6 +43,7 @@ public:
 private:
     Keyboard_Class::KeysState _lastStatus;
     Keyboard_Class::KeysState _currentStatus;
+    bool _goActsAsEnter = true;
 };
 
 #endif // KEYBOARD_MANAGER_H

@@ -47,6 +47,9 @@ public:
 
     bool getShowChat();
     void setShowChat(bool show);
+
+    bool getGoButtonToChat();
+    void setGoButtonToChat(bool on);
     
     bool getTtsEnabled();
     void setTtsEnabled(bool enabled);

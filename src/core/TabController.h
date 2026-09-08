@@ -13,6 +13,7 @@ public:
     
     void nextTab();
     void prevTab();
+    void showView(View* view); // jump straight to a tab (no-op if hidden/not found/current)
     void drawTabBar(DisplayManager& display, bool showBattery);
     void drawActiveView(DisplayManager& display);
 

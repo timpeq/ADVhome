@@ -12,7 +12,7 @@ bool KeyboardManager::wasEnterPressed() const {
             std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '\n') == _lastStatus.word.end()) ||
            (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '\r') != _currentStatus.word.end() &&
             std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '\r') == _lastStatus.word.end()) ||
-           M5Cardputer.BtnA.wasPressed();
+           (_goActsAsEnter && M5Cardputer.BtnA.wasPressed());
 }
 
 bool KeyboardManager::wasSpacePressed() const {
@@ -101,6 +101,10 @@ bool KeyboardManager::isEnterHeld() const {
 
 bool KeyboardManager::isGoHeld() const {
     return M5Cardputer.BtnA.isHolding();
+}
+
+bool KeyboardManager::wasGoPressed() const {
+    return M5Cardputer.BtnA.wasPressed();
 }
 
 bool KeyboardManager::isCharHeld(char character) const {

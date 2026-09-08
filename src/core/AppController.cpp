@@ -19,6 +19,7 @@ void AppController::begin() {
 
 void AppController::update() {
     _keyboard.update();
+    _keyboard.setGoActsAsEnter(!_config.getGoButtonToChat());
     _wifi.update();
     
     if (_setupPortal) {
@@ -292,7 +293,15 @@ void AppController::updateHAConnected() {
     }
     
     bool wasDetailActive = _isDetailViewActive;
-    
+
+    // The GO (top) button jumps straight to the Chat tab from anywhere.
+    if (_config.getGoButtonToChat() && _config.getShowChat() && _keyboard.wasGoPressed()) {
+        _isDetailViewActive = false;
+        wasDetailActive = false;
+        _tabController.showView(_chatView);
+        _redraw = true;
+    }
+
     static uint32_t lastMarquee = 0;
     if (millis() - lastMarquee > 250) {
         lastMarquee = millis();

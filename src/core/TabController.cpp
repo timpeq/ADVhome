@@ -47,6 +47,17 @@ void TabController::nextTab() {
     _tabs[_currentTabIndex].view->onEnter();
 }
 
+void TabController::showView(View* target) {
+    for (size_t i = 0; i < _tabs.size(); i++) {
+        if (_tabs[i].view != target) continue;
+        if (!_tabs[i].visible || i == (size_t)_currentTabIndex) return;
+        _tabs[_currentTabIndex].view->onExit();
+        _currentTabIndex = i;
+        _tabs[_currentTabIndex].view->onEnter();
+        return;
+    }
+}
+
 void TabController::prevTab() {
     if (_tabs.empty()) return;
     _tabs[_currentTabIndex].view->onExit();

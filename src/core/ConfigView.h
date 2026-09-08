@@ -52,6 +52,7 @@ private:
     bool _ttsEnabled;
     int _ttsVolume;
     bool _ttsDebug;
+    bool _goToChat;
     String _voicePipelineName;
     ScrollRepeater _scrollRepeater;
     

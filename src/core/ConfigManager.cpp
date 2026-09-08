@@ -149,6 +149,14 @@ void ConfigManager::setShowChat(bool show) {
     _prefs.putBool("show_chat", show);
 }
 
+bool ConfigManager::getGoButtonToChat() {
+    return _prefs.getBool("goToChat", true);
+}
+
+void ConfigManager::setGoButtonToChat(bool on) {
+    _prefs.putBool("goToChat", on);
+}
+
 bool ConfigManager::getTtsEnabled() {
     return _prefs.getBool("ttsEnabled", true);
 }
