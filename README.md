@@ -102,13 +102,19 @@ ADVHOME_PORT=/dev/ttyACM1 deploy
 ```
 
 `deploy` refuses to write when the slot is missing, when the image is larger
-than the slot, or when the device has no readable partition table. If the table
-itself is gone, `ptable.bin` in the repository is a known-good copy of this
-device's layout; restoring it is destructive and deliberate:
+than the slot, or when the device has no readable partition table.
 
-```sh
-esptool.py --chip esp32s3 --port /dev/ttyACM0 write_flash 0x8000 ptable.bin
-```
+M5Launcher owns the partition table on a shared device and rewrites it when
+firmwares are installed or removed, so slots move and the set of slots changes.
+That is why the target is resolved by label at flash time. If the `advhom` slot
+is missing entirely, reinstall ADVhome through M5Launcher so it allocates one;
+`deploy` will then find it by name.
+
+`ptable.bin` in the repository is a **historical snapshot** taken at one point in
+time, kept for reference. It is not authoritative and will not match a device
+whose firmware set has changed since. Do not write it back to `0x8000` to
+"repair" a layout: it would point the table at firmwares that are no longer at
+those offsets. Use `ptable` to see what is actually on the device.
 
 ## First boot
 

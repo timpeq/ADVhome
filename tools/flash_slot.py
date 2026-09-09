@@ -140,11 +140,11 @@ def main():
     if not parts:
         raise SystemExit(
             "error: no valid partition table on the device.\n"
-            "       The table at 0x8000 is blank or corrupt. ptable.bin in the\n"
-            "       repo is a known-good copy of this device's layout; restoring\n"
-            "       it is a deliberate, destructive step -- do it by hand:\n"
-            f"         esptool.py --chip {args.chip} --port {args.port} "
-            "write_flash 0x8000 ptable.bin")
+            "       The table at 0x8000 is blank or corrupt. M5Launcher owns\n"
+            "       this layout -- reinstall through it to rebuild the table.\n"
+            "       ptable.bin in the repo is only a historical snapshot and may\n"
+            "       no longer match this device; writing it back would point the\n"
+            "       table at firmwares that are not where it claims they are.")
 
     if args.show:
         print(f"\nPartition table on {args.port}:")
