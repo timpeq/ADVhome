@@ -16,6 +16,7 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, Ho
     _settings.push_back({"Battery % in Tab", 0});
     _settings.push_back({"Hide Unavail Home", 9});
     _settings.push_back({"Favorites Sort", 2});
+    _settings.push_back({"Temp Step", 22});
     _settings.push_back({"Scroll Start Delay", 5});
     _settings.push_back({"Scroll Repeat", 6});
     _settings.push_back({"Seek Step (Min)", 7});
@@ -30,6 +31,7 @@ void ConfigView::refreshValues() {
     _reconInt = _config.getReconnectInterval();
     _scrollDelay = _config.getScrollDelay();
     _scrollSpeed = _config.getScrollSpeed();
+    _tempStep = _config.getTempStep();
     _seekStep = _config.getSeekStep();
     _seekStepMax = _config.getSeekStepMax();
     _favoritesSort = _config.getFavoritesSort();
@@ -141,6 +143,9 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 21) {
             canvas->print(_goToChat ? "YES" : "NO");
             canvas->setTextColor(_goToChat ? TFT_GREEN : TFT_LIGHTGREY);
+        } else if (_settings[i].type == 22) {
+            canvas->print(_tempStep == 1 ? "0.5 deg" : _tempStep == 2 ? "1 deg" : "AUTO");
+            canvas->setTextColor(_tempStep == 0 ? TFT_LIGHTGREY : TFT_CYAN);
         }
     }
 }
@@ -197,6 +202,9 @@ void ConfigView::toggleCurrent(int direction) {
         if (_seekStepMax < _seekStep) _seekStep = _seekStepMax;
         _config.setSeekStep(_seekStep);
         _config.setSeekStepMax(_seekStepMax);
+    } else if (_settings[_selectedIndex].type == 22) {
+        _tempStep = (_tempStep + (direction > 0 ? 1 : 2)) % 3;
+        _config.setTempStep(_tempStep);
     } else if (_settings[_selectedIndex].type == 9) {
         _hideUnavailable = !_hideUnavailable;
         _config.setHideUnavailable(_hideUnavailable);

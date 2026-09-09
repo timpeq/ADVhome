@@ -57,8 +57,10 @@ private:
     float _climateTarget = 0.0f;
     float _climateLow = 0.0f;
     float _climateHigh = 0.0f;
-    bool _climateChangedLocally = false;
+    bool _climateChangedLocally = false;   // showing our own setpoint, not HA's
+    bool _climatePendingSend = false;      // that setpoint has not been sent yet
     uint32_t _lastClimateChangeTime = 0;
+    uint32_t _climateSentAt = 0;
     
     String _entityId;
 };

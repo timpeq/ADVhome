@@ -272,6 +272,14 @@ void ConfigManager::setScrollSpeed(int ms) {
     _prefs.putInt("scroll_speed", ms);
 }
 
+int ConfigManager::getTempStep() {
+    return _prefs.getInt("temp_step", 0);
+}
+
+void ConfigManager::setTempStep(int mode) {
+    _prefs.putInt("temp_step", mode);
+}
+
 int ConfigManager::getSeekStep() {
     return _prefs.getInt("seek_step", 5);
 }

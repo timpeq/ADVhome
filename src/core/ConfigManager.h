@@ -90,6 +90,10 @@ public:
     int getScrollSpeed();
     void setScrollSpeed(int ms);
     
+    // 0 = follow Home Assistant's target_temp_step, 1 = force 0.5, 2 = force 1.0
+    int getTempStep();
+    void setTempStep(int mode);
+
     int getSeekStep();
     void setSeekStep(int seconds);
     

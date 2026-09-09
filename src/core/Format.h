@@ -9,13 +9,20 @@
 // board this close to its flash ceiling.
 namespace Format {
 
-// One decimal place: 21.5 -> "21.5". NAN renders as "--".
-inline String oneDecimal(float value) {
+// Temperature label: 21.5 -> "21.5", 22.0 -> "22". Home Assistant only shows a
+// decimal when there is one, so a whole-degree thermostat reads "72", not
+// "72.0". NAN renders as "--".
+inline String temperature(float value) {
     if (isnan(value)) return "--";
     int tenths = (int)lroundf(value * 10.0f);
-    String out = String(tenths / 10);
-    out += '.';
-    out += (char)('0' + abs(tenths % 10));
+    bool negative = tenths < 0;
+    if (negative) tenths = -tenths;
+    String out = negative ? "-" : "";
+    out += String(tenths / 10);
+    if (tenths % 10 != 0) {
+        out += '.';
+        out += (char)('0' + tenths % 10);
+    }
     return out;
 }
 

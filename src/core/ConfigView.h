@@ -40,6 +40,7 @@ private:
     int _reconInt;
     int _scrollDelay;
     int _scrollSpeed;
+    int _tempStep;
     int _seekStep;
     int _seekStepMax;
     int _favoritesSort;

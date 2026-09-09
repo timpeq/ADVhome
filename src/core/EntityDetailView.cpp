@@ -11,6 +11,7 @@ void EntityDetailView::setEntityId(const String& id) {
     // Do not reuse the Enter press that selected this entity as play/pause.
     _playPauseKeyHeld = true;
     _climateChangedLocally = false;
+    _climatePendingSend = false;
     _volumeChangedLocally = false;
     _seekChangedLocally = false;
 }
@@ -233,7 +234,7 @@ void EntityDetailView::drawClimate(M5Canvas* canvas, const Entity& entity) {
     canvas->setTextColor(TFT_WHITE);
     canvas->setTextSize(3);
     canvas->setCursor(14, 58);
-    canvas->print(Format::oneDecimal(c.currentTemperature));
+    canvas->print(Format::temperature(c.currentTemperature));
     canvas->setTextSize(1);
     canvas->print(" now");
 
@@ -245,10 +246,10 @@ void EntityDetailView::drawClimate(M5Canvas* canvas, const Entity& entity) {
     if (c.hasRange()) {
         float lo = editing ? _climateLow : c.targetTempLow;
         float hi = editing ? _climateHigh : c.targetTempHigh;
-        canvas->print(Format::oneDecimal(lo) + "-" + Format::oneDecimal(hi));
+        canvas->print(Format::temperature(lo) + "-" + Format::temperature(hi));
     } else {
         float t = editing ? _climateTarget : c.targetTemperature;
-        canvas->print(Format::oneDecimal(t));
+        canvas->print(Format::temperature(t));
     }
     canvas->setTextSize(1);
     canvas->print(" set");
@@ -268,7 +269,12 @@ bool EntityDetailView::handleClimateInput(KeyboardManager& keyboard, const Entit
     ClimateState c;
     if (!_entityManager.getClimateState(entity.id, c)) return false;
     
-    float step = c.targetTempStep > 0.0f ? c.targetTempStep : 0.5f;
+    // Temp Step: 0 follows Home Assistant, 1 forces half degrees, 2 whole.
+    int stepMode = _config.getTempStep();
+    bool wholeDegrees = stepMode == 2;
+    float step = stepMode == 1 ? 0.5f
+               : stepMode == 2 ? 1.0f
+               : (c.targetTempStep > 0.0f ? c.targetTempStep : 0.5f);
     bool handled = false;
 
     // _playPauseKeyHeld is set true by setEntityId() to swallow the Enter press
@@ -291,16 +297,22 @@ bool EntityDetailView::handleClimateInput(KeyboardManager& keyboard, const Entit
             _climateLow = !isnan(c.targetTempLow) ? c.targetTempLow : base;
             _climateHigh = !isnan(c.targetTempHigh) ? c.targetTempHigh : base;
         }
-        float d = dir * step;
-        _climateTarget = constrain(_climateTarget + d, c.minTemp, c.maxTemp);
-        _climateLow = constrain(_climateLow + d, c.minTemp, c.maxTemp);
-        _climateHigh = constrain(_climateHigh + d, c.minTemp, c.maxTemp);
+        // In whole-degree mode snap onto the integer grid in the direction of
+        // travel, so a setpoint sitting on 21.5 moves to 22 rather than 22.5.
+        auto stepped = [&](float value) {
+            if (wholeDegrees) return dir > 0 ? floorf(value) + 1.0f : ceilf(value) - 1.0f;
+            return value + dir * step;
+        };
+        _climateTarget = constrain(stepped(_climateTarget), c.minTemp, c.maxTemp);
+        _climateLow = constrain(stepped(_climateLow), c.minTemp, c.maxTemp);
+        _climateHigh = constrain(stepped(_climateHigh), c.minTemp, c.maxTemp);
         _climateChangedLocally = true;
+        _climatePendingSend = true;
         _lastClimateChangeTime = millis();
         handled = true;
     }
 
-    if (_climateChangedLocally) {
+    if (_climatePendingSend) {
         uint32_t now = millis();
         bool keysIdle = !keyboard.isUpHeld() && !keyboard.isDownHeld() &&
                         !keyboard.isPlusHeld() && !keyboard.isMinusHeld();
@@ -309,11 +321,28 @@ bool EntityDetailView::handleClimateInput(KeyboardManager& keyboard, const Entit
             if (c.hasRange()) {
                 if (_onSetClimateRange) _onSetClimateRange(entity.id, _climateLow, _climateHigh);
             } else if (_onSetClimateTemp) {
-                if (_onSetClimateTemp) _onSetClimateTemp(entity.id, _climateTarget);
+                _onSetClimateTemp(entity.id, _climateTarget);
             }
+            _climatePendingSend = false;
+            _climateSentAt = now;
+        }
+        handled = true;
+    } else if (_climateChangedLocally) {
+        // Hold our own setpoint on screen until Home Assistant echoes a matching
+        // one back. Dropping it at send time made the display fall back to the
+        // stale server value for the length of the round trip, which read as the
+        // number bouncing to the new value, back, then forward again.
+        float tolerance = step * 0.5f;
+        bool serverAgrees = c.hasRange()
+            ? (fabsf(c.targetTempLow - _climateLow) < tolerance &&
+               fabsf(c.targetTempHigh - _climateHigh) < tolerance)
+            : (!isnan(c.targetTemperature) &&
+               fabsf(c.targetTemperature - _climateTarget) < tolerance);
+        // Give up eventually so a clamped or rejected setpoint cannot stick.
+        if (serverAgrees || millis() - _climateSentAt > 6000) {
             _climateChangedLocally = false;
         }
-        handled = true; // keep redrawing while an adjustment is live
+        handled = true;
     }
 
     if (keyboard.wasEnterPressed() && !_playPauseKeyHeld && !c.hvacModes.isEmpty()) {

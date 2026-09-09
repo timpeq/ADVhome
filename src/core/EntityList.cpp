@@ -67,12 +67,12 @@ String EntityList::secondaryText(const Entity& entity, uint16_t& color) const {
                   : entity.state == "off"    ? TFT_DARKGREY
                                              : TFT_GREEN;
             if (climate.hasRange()) {
-                return Format::oneDecimal(climate.targetTempLow) + "-" + Format::oneDecimal(climate.targetTempHigh);
+                return Format::temperature(climate.targetTempLow) + "-" + Format::temperature(climate.targetTempHigh);
             }
             if (climate.hasTarget()) {
-                return Format::oneDecimal(climate.currentTemperature) + ">" + Format::oneDecimal(climate.targetTemperature);
+                return Format::temperature(climate.currentTemperature) + ">" + Format::temperature(climate.targetTemperature);
             }
-            return Format::oneDecimal(climate.currentTemperature);
+            return Format::temperature(climate.currentTemperature);
         }
     } else if (entity.domain == "scene") {
         // Scenes store their last-activated timestamp as state; keep it compact.
