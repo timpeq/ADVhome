@@ -6,6 +6,37 @@
 #include <string.h>
 #include <math.h>
 
+namespace {
+
+// Pull the climate attributes we care about out of a state object's
+// "attributes". Shared by the HTTP initial-state chunker and both WebSocket
+// paths, so a thermostat is populated at boot instead of staying empty until
+// Home Assistant happens to push a state_changed for it.
+void readClimateAttributes(JsonVariantConst attrs, ClimateState& climate) {
+    if (!attrs["current_temperature"].isNull()) climate.currentTemperature = attrs["current_temperature"].as<float>();
+    if (!attrs["temperature"].isNull())         climate.targetTemperature  = attrs["temperature"].as<float>();
+    if (!attrs["target_temp_high"].isNull())    climate.targetTempHigh     = attrs["target_temp_high"].as<float>();
+    if (!attrs["target_temp_low"].isNull())     climate.targetTempLow      = attrs["target_temp_low"].as<float>();
+    if (!attrs["current_humidity"].isNull())    climate.currentHumidity    = attrs["current_humidity"].as<float>();
+    climate.minTemp        = attrs["min_temp"] | 7.0f;
+    climate.maxTemp        = attrs["max_temp"] | 35.0f;
+    climate.targetTempStep = attrs["target_temp_step"] | 0.5f;
+    climate.hvacAction     = attrs["hvac_action"] | "";
+
+    JsonArrayConst modes = attrs["hvac_modes"].as<JsonArrayConst>();
+    if (!modes.isNull()) {
+        String joined;
+        for (JsonVariantConst mode : modes) {
+            if (joined.length() > 0) joined += ",";
+            joined += mode.as<String>();
+        }
+        climate.hvacModes = joined;
+    }
+}
+
+} // namespace
+
+
 HomeAssistantManager::HomeAssistantManager(ConfigManager& config, EntityManager& entityManager) : _config(config), _entityManager(entityManager) {
 }
 
@@ -345,25 +376,7 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                                 stateObj["attributes"]["is_volume_muted"] | false);
                         } else if (entity_id.startsWith("climate.")) {
                             ClimateState climate;
-                            if (!stateObj["attributes"]["current_temperature"].isNull()) climate.currentTemperature = stateObj["attributes"]["current_temperature"].as<float>();
-                            if (!stateObj["attributes"]["temperature"].isNull()) climate.targetTemperature = stateObj["attributes"]["temperature"].as<float>();
-                            if (!stateObj["attributes"]["target_temp_high"].isNull()) climate.targetTempHigh = stateObj["attributes"]["target_temp_high"].as<float>();
-                            if (!stateObj["attributes"]["target_temp_low"].isNull()) climate.targetTempLow = stateObj["attributes"]["target_temp_low"].as<float>();
-                            if (!stateObj["attributes"]["current_humidity"].isNull()) climate.currentHumidity = stateObj["attributes"]["current_humidity"].as<float>();
-                            climate.minTemp = stateObj["attributes"]["min_temp"] | 7.0f;
-                            climate.maxTemp = stateObj["attributes"]["max_temp"] | 35.0f;
-                            climate.targetTempStep = stateObj["attributes"]["target_temp_step"] | 0.5f;
-                            climate.hvacAction = stateObj["attributes"]["hvac_action"] | "";
-                            
-                            JsonArray modes = stateObj["attributes"]["hvac_modes"].as<JsonArray>();
-                            if (!modes.isNull()) {
-                                String mstr;
-                                for (JsonVariant m : modes) {
-                                    if (mstr.length() > 0) mstr += ",";
-                                    mstr += m.as<String>();
-                                }
-                                climate.hvacModes = mstr;
-                            }
+                            readClimateAttributes(stateObj["attributes"], climate);
                             _entityManager.updateClimateAttributes(entity_id, climate);
                         }
 
@@ -397,25 +410,7 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                                 eventData["new_state"]["attributes"]["is_volume_muted"] | false);
                         } else if (entity_id.startsWith("climate.")) {
                             ClimateState climate;
-                            if (!eventData["new_state"]["attributes"]["current_temperature"].isNull()) climate.currentTemperature = eventData["new_state"]["attributes"]["current_temperature"].as<float>();
-                            if (!eventData["new_state"]["attributes"]["temperature"].isNull()) climate.targetTemperature = eventData["new_state"]["attributes"]["temperature"].as<float>();
-                            if (!eventData["new_state"]["attributes"]["target_temp_high"].isNull()) climate.targetTempHigh = eventData["new_state"]["attributes"]["target_temp_high"].as<float>();
-                            if (!eventData["new_state"]["attributes"]["target_temp_low"].isNull()) climate.targetTempLow = eventData["new_state"]["attributes"]["target_temp_low"].as<float>();
-                            if (!eventData["new_state"]["attributes"]["current_humidity"].isNull()) climate.currentHumidity = eventData["new_state"]["attributes"]["current_humidity"].as<float>();
-                            climate.minTemp = eventData["new_state"]["attributes"]["min_temp"] | 7.0f;
-                            climate.maxTemp = eventData["new_state"]["attributes"]["max_temp"] | 35.0f;
-                            climate.targetTempStep = eventData["new_state"]["attributes"]["target_temp_step"] | 0.5f;
-                            climate.hvacAction = eventData["new_state"]["attributes"]["hvac_action"] | "";
-                            
-                            JsonArray modes = eventData["new_state"]["attributes"]["hvac_modes"].as<JsonArray>();
-                            if (!modes.isNull()) {
-                                String mstr;
-                                for (JsonVariant m : modes) {
-                                    if (mstr.length() > 0) mstr += ",";
-                                    mstr += m.as<String>();
-                                }
-                                climate.hvacModes = mstr;
-                            }
+                            readClimateAttributes(eventData["new_state"]["attributes"], climate);
                             _entityManager.updateClimateAttributes(entity_id, climate);
                         }
 
@@ -1080,14 +1075,18 @@ void HomeAssistantManager::fetchInitialStates() {
                                 if (!skip) {
                                     _entityManager.updateEntity(entity_id, state, friendly_name);
                                     if (entity_id.startsWith("media_player.")) {
-                                    _entityManager.updateMediaAttributes(entity_id,
-                                        doc["attributes"]["media_title"] | "",
-                                        doc["attributes"]["media_artist"] | "",
-                                        doc["attributes"]["media_album_name"] | "",
-                                        doc["attributes"]["media_duration"] | 0.0f,
-                                        doc["attributes"]["media_position"] | 0.0f,
-                                        doc["attributes"]["volume_level"] | 0.0f,
-                                        doc["attributes"]["is_volume_muted"] | false);
+                                        _entityManager.updateMediaAttributes(entity_id,
+                                            doc["attributes"]["media_title"] | "",
+                                            doc["attributes"]["media_artist"] | "",
+                                            doc["attributes"]["media_album_name"] | "",
+                                            doc["attributes"]["media_duration"] | 0.0f,
+                                            doc["attributes"]["media_position"] | 0.0f,
+                                            doc["attributes"]["volume_level"] | 0.0f,
+                                            doc["attributes"]["is_volume_muted"] | false);
+                                    } else if (entity_id.startsWith("climate.")) {
+                                        ClimateState climate;
+                                        readClimateAttributes(doc["attributes"], climate);
+                                        _entityManager.updateClimateAttributes(entity_id, climate);
                                     }
                                     count++;
                                 }
