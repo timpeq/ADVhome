@@ -1,5 +1,5 @@
 #include "ConfigView.h"
-
+#include "TextScroller.h"
 ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, HomeAssistantManager& haManager, std::function<void()> onSettingsChanged)
     : _config(config), _diagnosticView(diagnosticView), _haManager(haManager), _onSettingsChanged(onSettingsChanged), _scrollRepeater(config), _valueRepeater(config) {
     _settings.push_back({"Brightness", 10});
@@ -130,8 +130,7 @@ void ConfigView::draw(DisplayManager& display) {
             canvas->setTextColor(_ttsEnabled ? TFT_GREEN : TFT_LIGHTGREY);
         } else if (_settings[i].type == 18) {
             String label = _voicePipelineName.isEmpty() ? String("Default") : _voicePipelineName;
-            if (label.length() > 14) label = label.substring(0, 12) + "..";
-            canvas->print(label);
+            canvas->print(TextScroller::visible(label, 14));
             canvas->setTextColor(_voicePipelineName.isEmpty() ? TFT_LIGHTGREY : TFT_CYAN);
         } else if (_settings[i].type == 19) {
             canvas->print(String(_ttsVolume) + "%");
