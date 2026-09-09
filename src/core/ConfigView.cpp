@@ -1,26 +1,26 @@
 #include "ConfigView.h"
 
 ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, HomeAssistantManager& haManager, std::function<void()> onSettingsChanged)
-    : _config(config), _diagnosticView(diagnosticView), _haManager(haManager), _onSettingsChanged(onSettingsChanged), _scrollRepeater(config) {
-    _settings.push_back({"Battery % in Tab Bar", 0});
-    _settings.push_back({"Hide Unavailable on Home", 9});
-    _settings.push_back({"Show Chat Tab", 16});
-    _settings.push_back({"GO Btn to Chat", 21});
-    _settings.push_back({"Favorites Sort", 2});
-    _settings.push_back({"Reconnect Interval", 1});
-    _settings.push_back({"Scroll Start Delay", 5});
-    _settings.push_back({"Scroll Repeat", 6});
-    _settings.push_back({"Seek Step (Min)", 7});
-    _settings.push_back({"Seek Step (Max)", 8});
+    : _config(config), _diagnosticView(diagnosticView), _haManager(haManager), _onSettingsChanged(onSettingsChanged), _scrollRepeater(config), _valueRepeater(config) {
     _settings.push_back({"Brightness", 10});
+    _settings.push_back({"TTS Volume", 19});
     _settings.push_back({"Dim T/O", 11});
     _settings.push_back({"Disp Off T/O", 12});
     _settings.push_back({"Soft Sleep T/O", 13});
     _settings.push_back({"Deep Sleep T/O", 14});
     _settings.push_back({"ESC for Sleep", 15});
     _settings.push_back({"TTS Playback", 17});
-    _settings.push_back({"TTS Volume", 19});
     _settings.push_back({"Voice Pipeline", 18});
+    _settings.push_back({"Show Chat Tab", 16});
+    _settings.push_back({"GO Btn to Chat", 21});
+    _settings.push_back({"Battery % in Tab", 0});
+    _settings.push_back({"Hide Unavail Home", 9});
+    _settings.push_back({"Favorites Sort", 2});
+    _settings.push_back({"Scroll Start Delay", 5});
+    _settings.push_back({"Scroll Repeat", 6});
+    _settings.push_back({"Seek Step (Min)", 7});
+    _settings.push_back({"Seek Step (Max)", 8});
+    _settings.push_back({"Reconnect Interval", 1});
     _settings.push_back({"TTS Debug", 20});
     _settings.push_back({"Diagnostics", 4});
 }
@@ -146,41 +146,55 @@ void ConfigView::draw(DisplayManager& display) {
     }
 }
 
-void ConfigView::toggleCurrent() {
+void ConfigView::toggleCurrent(int direction) {
     if (_selectedIndex < 0 || _selectedIndex >= _settings.size()) return;
     
     if (_settings[_selectedIndex].type == 0) {
         _showBattery = !_showBattery;
         _config.setShowBattery(_showBattery);
     } else if (_settings[_selectedIndex].type == 1) {
-        _reconInt += 1000;
-        if (_reconInt > 30000) _reconInt = 1000;
+        _reconInt += 1000 * direction;
+        if (_reconInt > 30000) _reconInt = 30000;
+        if (_reconInt < 1000) _reconInt = 1000;
         _config.setReconnectInterval(_reconInt);
     } else if (_settings[_selectedIndex].type == 2) {
         _favoritesSort = _favoritesSort == 0 ? 1 : 0;
         _config.setFavoritesSort(_favoritesSort);
     } else if (_settings[_selectedIndex].type == 5) {
-        _scrollDelay += 100;
-        if (_scrollDelay > 1000) _scrollDelay = 200;
+        _scrollDelay += 100 * direction;
+        if (_scrollDelay > 1000) _scrollDelay = 1000;
+        if (_scrollDelay < 200) _scrollDelay = 200;
         _config.setScrollDelay(_scrollDelay);
     } else if (_settings[_selectedIndex].type == 6) {
-        _scrollSpeed -= 20;
-        if (_scrollSpeed < 40) _scrollSpeed = 200;
+        _scrollSpeed += 20 * direction;
+        if (_scrollSpeed > 200) _scrollSpeed = 200;
+        if (_scrollSpeed < 40) _scrollSpeed = 40;
         _config.setScrollSpeed(_scrollSpeed);
     } else if (_settings[_selectedIndex].type == 7) {
-        if (_seekStep == 5) _seekStep = 10;
-        else if (_seekStep == 10) _seekStep = 15;
-        else if (_seekStep == 15) _seekStep = 30;
-        else _seekStep = 5;
+        if (direction > 0) {
+            if (_seekStep == 5) _seekStep = 10;
+            else if (_seekStep == 10) _seekStep = 15;
+            else if (_seekStep == 15) _seekStep = 30;
+        } else {
+            if (_seekStep == 30) _seekStep = 15;
+            else if (_seekStep == 15) _seekStep = 10;
+            else if (_seekStep == 10) _seekStep = 5;
+        }
         if (_seekStep > _seekStepMax) _seekStepMax = _seekStep;
         _config.setSeekStep(_seekStep);
         _config.setSeekStepMax(_seekStepMax);
     } else if (_settings[_selectedIndex].type == 8) {
-        if (_seekStepMax == 5) _seekStepMax = 10;
-        else if (_seekStepMax == 10) _seekStepMax = 15;
-        else if (_seekStepMax == 15) _seekStepMax = 30;
-        else if (_seekStepMax == 30) _seekStepMax = 60;
-        else _seekStepMax = 5;
+        if (direction > 0) {
+            if (_seekStepMax == 5) _seekStepMax = 10;
+            else if (_seekStepMax == 10) _seekStepMax = 15;
+            else if (_seekStepMax == 15) _seekStepMax = 30;
+            else if (_seekStepMax == 30) _seekStepMax = 60;
+        } else {
+            if (_seekStepMax == 60) _seekStepMax = 30;
+            else if (_seekStepMax == 30) _seekStepMax = 15;
+            else if (_seekStepMax == 15) _seekStepMax = 10;
+            else if (_seekStepMax == 10) _seekStepMax = 5;
+        }
         if (_seekStepMax < _seekStep) _seekStep = _seekStepMax;
         _config.setSeekStep(_seekStep);
         _config.setSeekStepMax(_seekStepMax);
@@ -192,24 +206,29 @@ void ConfigView::toggleCurrent() {
         _config.setShowChat(_showChat);
         if (_onSettingsChanged) _onSettingsChanged();
     } else if (_settings[_selectedIndex].type == 10) {
-        _brightness += 25;
-        if (_brightness > 255) _brightness = 25;
+        _brightness += 25 * direction;
+        if (_brightness > 255) _brightness = 255;
+        if (_brightness < 25) _brightness = 25;
         _config.setDisplayBrightness(_brightness);
     } else if (_settings[_selectedIndex].type == 11) {
-        _dimTO += 10;
-        if (_dimTO > 120) _dimTO = 10;
+        _dimTO += 10 * direction;
+        if (_dimTO > 120) _dimTO = 120;
+        if (_dimTO < 10) _dimTO = 10;
         _config.setDimTimeout(_dimTO);
     } else if (_settings[_selectedIndex].type == 12) {
-        _dispOffTO += 30;
-        if (_dispOffTO > 300) _dispOffTO = 30;
+        _dispOffTO += 30 * direction;
+        if (_dispOffTO > 300) _dispOffTO = 300;
+        if (_dispOffTO < 30) _dispOffTO = 30;
         _config.setDisplayOffTimeout(_dispOffTO);
     } else if (_settings[_selectedIndex].type == 13) {
-        _softSleepTO += 30;
-        if (_softSleepTO > 600) _softSleepTO = 60;
+        _softSleepTO += 30 * direction;
+        if (_softSleepTO > 600) _softSleepTO = 600;
+        if (_softSleepTO < 60) _softSleepTO = 60;
         _config.setSoftSleepTimeout(_softSleepTO);
     } else if (_settings[_selectedIndex].type == 14) {
-        _deepSleepTO += 300; // 5 min steps
-        if (_deepSleepTO > 7200) _deepSleepTO = 300;
+        _deepSleepTO += 300 * direction;
+        if (_deepSleepTO > 7200) _deepSleepTO = 7200;
+        if (_deepSleepTO < 300) _deepSleepTO = 300;
         _config.setDeepSleepTimeout(_deepSleepTO);
     } else if (_settings[_selectedIndex].type == 15) {
         _escDeepSleep = !_escDeepSleep;
@@ -218,9 +237,15 @@ void ConfigView::toggleCurrent() {
         _ttsEnabled = !_ttsEnabled;
         _config.setTtsEnabled(_ttsEnabled);
     } else if (_settings[_selectedIndex].type == 19) {
-        _ttsVolume += 10;
-        if (_ttsVolume > 100) _ttsVolume = 0;
+        _ttsVolume += 10 * direction;
+        if (_ttsVolume > 100) _ttsVolume = 100;
+        if (_ttsVolume < 0) _ttsVolume = 0;
         _config.setTtsVolume(_ttsVolume);
+        if (!M5.Speaker.isRunning()) {
+            M5.Speaker.begin();
+        }
+        M5.Speaker.setVolume(_ttsVolume * 255 / 100);
+        M5.Speaker.tone(1000, 50);
     } else if (_settings[_selectedIndex].type == 20) {
         _ttsDebug = !_ttsDebug;
         _config.setTtsDebug(_ttsDebug);
@@ -235,8 +260,11 @@ void ConfigView::toggleCurrent() {
         for (size_t i = 0; i < pipes.size(); i++) {
             if (pipes[i].id == currentId) { current = (int)i; break; }
         }
-        int next = current + 1;
-        if (next >= (int)pipes.size()) {
+        int next = current + direction;
+        if (next >= (int)pipes.size()) next = -1;
+        if (next < -1) next = (int)pipes.size() - 1;
+        
+        if (next == -1) {
             _config.setVoicePipeline("", "");
             _voicePipelineName = "";
         } else {
@@ -269,11 +297,24 @@ bool ConfigView::handleInput(KeyboardManager& keyboard) {
         handled = true;
     }
     
-    if (keyboard.wasEnterPressed() || keyboard.wasRightPressed()) {
+    bool decPressed = keyboard.wasLeftPressed() || keyboard.wasMinusPressed();
+    bool decHeld = keyboard.isLeftHeld() || keyboard.isMinusHeld() || keyboard.isCharHeld('-') || keyboard.isCharHeld('_');
+    bool incPressed = keyboard.wasRightPressed() || keyboard.wasPlusPressed();
+    bool incHeld = keyboard.isRightHeld() || keyboard.isPlusHeld() || keyboard.isCharHeld('+') || keyboard.isCharHeld('=');
+    
+    for (char ch : keyboard.getNewChars()) {
+        if (ch == '+' || ch == '=') incPressed = true;
+        if (ch == '-' || ch == '_') decPressed = true;
+    }
+    
+    int dir = _valueRepeater.update(decPressed, decHeld, incPressed, incHeld);
+    if (keyboard.wasEnterPressed()) dir = 1;
+    
+    if (dir != 0) {
         if (_settings[_selectedIndex].type == 4) {
             _showDiagnostics = true;
         } else {
-            toggleCurrent();
+            toggleCurrent(dir);
         }
         handled = true;
     }

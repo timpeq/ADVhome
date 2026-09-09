@@ -3,6 +3,8 @@
 
 void EntityManager::clear() {
     _entities.clear();
+    _mediaStates.clear();
+    _climateStates.clear();
 }
 
 bool EntityManager::isSupportedDomain(const String& domain) const {
@@ -38,9 +40,11 @@ void EntityManager::updateEntity(const String& entity_id, const String& state, c
         e.domain = domain;
         e.state = state;
         e.friendlyName = friendly_name.isEmpty() ? entity_id : friendly_name;
+        e.lastUpdate = millis();
         _entities[entity_id] = e;
     } else {
         _entities[entity_id].state = state;
+        _entities[entity_id].lastUpdate = millis();
         if (!friendly_name.isEmpty()) {
             _entities[entity_id].friendlyName = friendly_name;
         }
@@ -48,16 +52,22 @@ void EntityManager::updateEntity(const String& entity_id, const String& state, c
 }
 
 void EntityManager::updateMediaAttributes(const String& entity_id, const String& title, const String& artist, const String& album, float duration, float position, float volume, bool muted) {
-    auto it = _entities.find(entity_id);
-    if (it != _entities.end() && it->second.domain == "media_player") {
-        it->second.mediaTitle = title;
-        it->second.mediaArtist = artist;
-        it->second.mediaAlbum = album;
-        it->second.mediaDuration = duration;
-        it->second.mediaPosition = position;
-        it->second.mediaPositionUpdatedAt = millis();
-        it->second.volumeLevel = volume;
-        it->second.isVolumeMuted = muted;
+    if (_entities.find(entity_id) != _entities.end() && _entities[entity_id].domain == "media_player") {
+        MediaPlayerState& s = _mediaStates[entity_id];
+        s.title = title;
+        s.artist = artist;
+        s.album = album;
+        s.duration = duration;
+        s.position = position;
+        s.positionUpdatedAt = millis();
+        s.volumeLevel = volume;
+        s.isVolumeMuted = muted;
+    }
+}
+
+void EntityManager::updateClimateAttributes(const String& entity_id, const ClimateState& climate) {
+    if (_entities.find(entity_id) != _entities.end() && _entities[entity_id].domain == "climate") {
+        _climateStates[entity_id] = climate;
     }
 }
 
@@ -95,4 +105,22 @@ Entity EntityManager::getEntity(const String& id) const {
         return it->second;
     }
     return Entity(); // Empty
+}
+
+bool EntityManager::getMediaPlayerState(const String& id, MediaPlayerState& state) const {
+    auto it = _mediaStates.find(id);
+    if (it != _mediaStates.end()) {
+        state = it->second;
+        return true;
+    }
+    return false;
+}
+
+bool EntityManager::getClimateState(const String& id, ClimateState& state) const {
+    auto it = _climateStates.find(id);
+    if (it != _climateStates.end()) {
+        state = it->second;
+        return true;
+    }
+    return false;
 }

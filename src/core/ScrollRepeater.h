@@ -17,6 +17,9 @@ public:
     // Returns -1 for minus, 1 for plus, and 0 when no movement is due.
     int updatePlusMinus(KeyboardManager& keyboard);
 
+    // Generic handler
+    int update(bool wasDecPressed, bool isDecHeld, bool wasIncPressed, bool isIncHeld);
+
 private:
     ConfigManager& _config;
     uint32_t _holdStarted = 0;

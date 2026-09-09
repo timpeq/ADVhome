@@ -4,6 +4,7 @@
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include <string.h>
+#include <math.h>
 
 HomeAssistantManager::HomeAssistantManager(ConfigManager& config, EntityManager& entityManager) : _config(config), _entityManager(entityManager) {
 }
@@ -94,6 +95,17 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
             filter["result"][0]["attributes"]["media_position"] = true;
             filter["result"][0]["attributes"]["volume_level"] = true;
             filter["result"][0]["attributes"]["is_volume_muted"] = true;
+            filter["result"][0]["attributes"]["device_class"] = true;
+            filter["result"][0]["attributes"]["current_temperature"] = true;
+            filter["result"][0]["attributes"]["temperature"] = true;
+            filter["result"][0]["attributes"]["target_temp_high"] = true;
+            filter["result"][0]["attributes"]["target_temp_low"] = true;
+            filter["result"][0]["attributes"]["current_humidity"] = true;
+            filter["result"][0]["attributes"]["min_temp"] = true;
+            filter["result"][0]["attributes"]["max_temp"] = true;
+            filter["result"][0]["attributes"]["target_temp_step"] = true;
+            filter["result"][0]["attributes"]["hvac_action"] = true;
+            filter["result"][0]["attributes"]["hvac_modes"] = true;
             
             filter["event"]["event_type"] = true;
             filter["event"]["type"] = true;
@@ -118,6 +130,17 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
             filter["event"]["data"]["new_state"]["attributes"]["media_position"] = true;
             filter["event"]["data"]["new_state"]["attributes"]["volume_level"] = true;
             filter["event"]["data"]["new_state"]["attributes"]["is_volume_muted"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["device_class"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["current_temperature"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["temperature"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["target_temp_high"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["target_temp_low"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["current_humidity"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["min_temp"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["max_temp"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["target_temp_step"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["hvac_action"] = true;
+            filter["event"]["data"]["new_state"]["attributes"]["hvac_modes"] = true;
 
             filter["error"]["message"] = true;
 
@@ -265,6 +288,7 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                         String state = stateObj["state"].as<String>();
                         String friendly_name = stateObj["attributes"]["friendly_name"] | "";
                         
+
                         if (entity_id.startsWith("sensor.")) {
                             String device_class = stateObj["attributes"]["device_class"] | "";
                             if (device_class != "temperature" && device_class != "humidity") {
@@ -273,6 +297,7 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                         }
                         
                         _entityManager.updateEntity(entity_id, state, friendly_name);
+                        
                         if (entity_id.startsWith("media_player.")) {
                             _entityManager.updateMediaAttributes(entity_id,
                                 stateObj["attributes"]["media_title"] | "",
@@ -282,7 +307,30 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                                 stateObj["attributes"]["media_position"] | 0.0f,
                                 stateObj["attributes"]["volume_level"] | 0.0f,
                                 stateObj["attributes"]["is_volume_muted"] | false);
+                        } else if (entity_id.startsWith("climate.")) {
+                            ClimateState climate;
+                            climate.currentTemperature = stateObj["attributes"]["current_temperature"].as<float>();
+                            climate.targetTemperature = stateObj["attributes"]["temperature"].as<float>();
+                            climate.targetTempHigh = stateObj["attributes"]["target_temp_high"].as<float>();
+                            climate.targetTempLow = stateObj["attributes"]["target_temp_low"].as<float>();
+                            climate.currentHumidity = stateObj["attributes"]["current_humidity"].as<float>();
+                            climate.minTemp = stateObj["attributes"]["min_temp"] | 7.0f;
+                            climate.maxTemp = stateObj["attributes"]["max_temp"] | 35.0f;
+                            climate.targetTempStep = stateObj["attributes"]["target_temp_step"] | 0.5f;
+                            climate.hvacAction = stateObj["attributes"]["hvac_action"] | "";
+                            
+                            JsonArray modes = stateObj["attributes"]["hvac_modes"].as<JsonArray>();
+                            if (!modes.isNull()) {
+                                String mstr;
+                                for (JsonVariant m : modes) {
+                                    if (mstr.length() > 0) mstr += ",";
+                                    mstr += m.as<String>();
+                                }
+                                climate.hvacModes = mstr;
+                            }
+                            _entityManager.updateClimateAttributes(entity_id, climate);
                         }
+
                     }
                     Serial.println("[HA] Initial states loaded.");
                 }
@@ -292,25 +340,49 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                     String state = eventData["new_state"]["state"].as<String>();
                     String friendly_name = eventData["new_state"]["attributes"]["friendly_name"] | "";
                     
-                    if (entity_id.startsWith("sensor.")) {
-                        String device_class = eventData["new_state"]["attributes"]["device_class"] | "";
-                        if (device_class != "temperature" && device_class != "humidity") {
-                            return; // Stop processing this event
+
+                        if (entity_id.startsWith("sensor.")) {
+                            String device_class = eventData["new_state"]["attributes"]["device_class"] | "";
+                            if (device_class != "temperature" && device_class != "humidity") {
+                                return;
+                            }
                         }
-                    }
-                    
-                    _entityManager.updateEntity(entity_id, state, friendly_name);
-                    if (entity_id.startsWith("media_player.")) {
-                        JsonObject attrs = eventData["new_state"]["attributes"];
-                        _entityManager.updateMediaAttributes(entity_id,
-                            attrs["media_title"] | "",
-                            attrs["media_artist"] | "",
-                            attrs["media_album_name"] | "",
-                            attrs["media_duration"] | 0.0f,
-                            attrs["media_position"] | 0.0f,
-                            attrs["volume_level"] | 0.0f,
-                            attrs["is_volume_muted"] | false);
-                    }
+                        
+                        _entityManager.updateEntity(entity_id, state, friendly_name);
+                        
+                        if (entity_id.startsWith("media_player.")) {
+                            _entityManager.updateMediaAttributes(entity_id,
+                                eventData["new_state"]["attributes"]["media_title"] | "",
+                                eventData["new_state"]["attributes"]["media_artist"] | "",
+                                eventData["new_state"]["attributes"]["media_album_name"] | "",
+                                eventData["new_state"]["attributes"]["media_duration"] | 0.0f,
+                                eventData["new_state"]["attributes"]["media_position"] | 0.0f,
+                                eventData["new_state"]["attributes"]["volume_level"] | 0.0f,
+                                eventData["new_state"]["attributes"]["is_volume_muted"] | false);
+                        } else if (entity_id.startsWith("climate.")) {
+                            ClimateState climate;
+                            climate.currentTemperature = eventData["new_state"]["attributes"]["current_temperature"].as<float>();
+                            climate.targetTemperature = eventData["new_state"]["attributes"]["temperature"].as<float>();
+                            climate.targetTempHigh = eventData["new_state"]["attributes"]["target_temp_high"].as<float>();
+                            climate.targetTempLow = eventData["new_state"]["attributes"]["target_temp_low"].as<float>();
+                            climate.currentHumidity = eventData["new_state"]["attributes"]["current_humidity"].as<float>();
+                            climate.minTemp = eventData["new_state"]["attributes"]["min_temp"] | 7.0f;
+                            climate.maxTemp = eventData["new_state"]["attributes"]["max_temp"] | 35.0f;
+                            climate.targetTempStep = eventData["new_state"]["attributes"]["target_temp_step"] | 0.5f;
+                            climate.hvacAction = eventData["new_state"]["attributes"]["hvac_action"] | "";
+                            
+                            JsonArray modes = eventData["new_state"]["attributes"]["hvac_modes"].as<JsonArray>();
+                            if (!modes.isNull()) {
+                                String mstr;
+                                for (JsonVariant m : modes) {
+                                    if (mstr.length() > 0) mstr += ",";
+                                    mstr += m.as<String>();
+                                }
+                                climate.hvacModes = mstr;
+                            }
+                            _entityManager.updateClimateAttributes(entity_id, climate);
+                        }
+
                 }
             } else {
                 Serial.println("[HA] JSON Parse Failed!");
@@ -840,25 +912,28 @@ void HomeAssistantManager::adjustEntity(const String& entity_id, int direction) 
     if (entity.id == "") return;
 
     if (entity.domain == "media_player") {
+        MediaPlayerState ms;
+        if (!_entityManager.getMediaPlayerState(entity_id, ms)) return;
+        
         float step = 0.05f; // 5%
-        float newVol = entity.volumeLevel + (direction > 0 ? step : -step);
+        float newVol = ms.volumeLevel + (direction > 0 ? step : -step);
         if (newVol < 0.0f) newVol = 0.0f;
         if (newVol > 1.0f) newVol = 1.0f;
         setMediaVolume(entity_id, newVol);
         
         // Optimistically update the entity locally so rapid presses reflect instantly
-        _entityManager.updateMediaAttributes(entity_id, entity.mediaTitle, entity.mediaArtist, entity.mediaAlbum, entity.mediaDuration, entity.mediaPosition, newVol, entity.isVolumeMuted);
+        _entityManager.updateMediaAttributes(entity_id, ms.title, ms.artist, ms.album, ms.duration, ms.position, newVol, ms.isVolumeMuted);
     } else if (entity.domain == "light") {
-        DynamicJsonDocument doc(512);
+        JsonDocument doc;
         doc["id"] = _nextMsgId++;
         doc["type"] = "call_service";
         doc["domain"] = "light";
         doc["service"] = "turn_on";
         
-        JsonObject target = doc.createNestedObject("target");
+        JsonObject target = doc["target"].to<JsonObject>();
         target["entity_id"] = entity_id;
         
-        JsonObject service_data = doc.createNestedObject("service_data");
+        JsonObject service_data = doc["service_data"].to<JsonObject>();
         service_data["brightness_step_pct"] = direction > 0 ? 10 : -10;
         
         String payload;
@@ -998,4 +1073,47 @@ void HomeAssistantManager::fetchInitialStates() {
     
     if (secureClient) delete secureClient;
     if (client) delete client;
+}
+
+void HomeAssistantManager::setClimateTemperature(const String& entity_id, float temp) {
+    if (!_isConnected || !_isAuthenticated) return;
+    JsonDocument doc;
+    doc["id"] = _nextMsgId++;
+    doc["type"] = "call_service";
+    doc["domain"] = "climate";
+    doc["service"] = "set_temperature";
+    doc["target"]["entity_id"] = entity_id;
+    doc["service_data"]["temperature"] = temp;
+    String payload;
+    serializeJson(doc, payload);
+    _ws.sendTXT(payload);
+}
+
+void HomeAssistantManager::setClimateTempRange(const String& entity_id, float low, float high) {
+    if (!_isConnected || !_isAuthenticated) return;
+    JsonDocument doc;
+    doc["id"] = _nextMsgId++;
+    doc["type"] = "call_service";
+    doc["domain"] = "climate";
+    doc["service"] = "set_temperature";
+    doc["target"]["entity_id"] = entity_id;
+    doc["service_data"]["target_temp_low"] = low;
+    doc["service_data"]["target_temp_high"] = high;
+    String payload;
+    serializeJson(doc, payload);
+    _ws.sendTXT(payload);
+}
+
+void HomeAssistantManager::setHvacMode(const String& entity_id, const String& mode) {
+    if (!_isConnected || !_isAuthenticated) return;
+    JsonDocument doc;
+    doc["id"] = _nextMsgId++;
+    doc["type"] = "call_service";
+    doc["domain"] = "climate";
+    doc["service"] = "set_hvac_mode";
+    doc["target"]["entity_id"] = entity_id;
+    doc["service_data"]["hvac_mode"] = mode;
+    String payload;
+    serializeJson(doc, payload);
+    _ws.sendTXT(payload);
 }

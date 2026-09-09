@@ -264,8 +264,10 @@ void AppController::updateHAConnected() {
         auto onCallService = [this](String domain, String service) {
             String eId = _detailView->getEntityId();
             if (service == "volume_mute" && domain == "media_player") {
-                Entity e = _entityManager.getEntity(eId);
-                _haManager->toggleMute(eId, !e.isVolumeMuted);
+                MediaPlayerState ms;
+                if (_entityManager.getMediaPlayerState(eId, ms)) {
+                    _haManager->toggleMute(eId, !ms.isVolumeMuted);
+                }
             } else {
                 _haManager->callService(domain, service, eId);
             }
@@ -283,7 +285,17 @@ void AppController::updateHAConnected() {
             _haManager->seekMedia(entityId, position);
         };
         
-        _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSeekMedia, onSecureService);
+        auto onSetClimateTemp = [this](String entityId, float temp) {
+            _haManager->setClimateTemperature(entityId, temp);
+        };
+        auto onSetClimateRange = [this](String entityId, float low, float high) {
+            _haManager->setClimateTempRange(entityId, low, high);
+        };
+        auto onSetHvacMode = [this](String entityId, String mode) {
+            _haManager->setHvacMode(entityId, mode);
+        };
+        
+        _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSeekMedia, onSecureService, onSetClimateTemp, onSetClimateRange, onSetHvacMode);
         
         _tabController.addView(_homeView, "Home");
         _tabController.addView(_chatView, "Chat");
@@ -339,11 +351,10 @@ void AppController::updateHAConnected() {
             for (int i = 0; i < dots; i++) waiting += ".";
             
             if (isWifiDisc) {
-                _display.drawMessage("WiFi Disconnected", waiting, TFT_YELLOW);
+                _display.drawModalMessage("WiFi Disconnected", waiting, TFT_YELLOW);
             } else {
-                _display.drawMessage("HA Disconnected", waiting, TFT_CYAN);
+                _display.drawModalMessage("HA Disconnected", waiting, TFT_CYAN);
             }
-            _display.push();
             _redraw = false;
         }
     } else {
@@ -384,7 +395,8 @@ void AppController::drawCurrentState() {
             }
             String waiting = "Waiting";
             for (int i = 0; i < dots; i++) waiting += ".";
-            _display.drawMessage("Connecting to:", _ssid + "\n\n" + waiting, TFT_YELLOW);
+            _display.clear();
+            _display.drawModalMessage("WiFi: " + _ssid, waiting, TFT_YELLOW);
             break;
         }
             
@@ -403,9 +415,10 @@ void AppController::drawCurrentState() {
             if (_redraw) { 
                 hadots = (hadots + 1) % 4;
             }
-            String hawaiting = "Connecting HA";
+            String hawaiting = "Connecting";
             for (int i = 0; i < hadots; i++) hawaiting += ".";
-            _display.drawMessage("Home Assistant", hawaiting, TFT_CYAN);
+            _display.clear();
+            _display.drawModalMessage("Home Assistant", hawaiting, TFT_CYAN);
             break;
         }
             

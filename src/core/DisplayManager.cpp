@@ -17,14 +17,36 @@ void DisplayManager::clear(uint16_t color) {
 
 void DisplayManager::drawMessage(const String& title, const String& message, uint16_t titleColor) {
     clear();
-    _canvas.setCursor(0, 0);
     _canvas.setTextColor(titleColor);
     _canvas.setTextSize(2);
-    _canvas.println(title);
+    _canvas.setCursor(10, 40);
+    _canvas.print(title);
     
     _canvas.setTextColor(TFT_WHITE);
     _canvas.setTextSize(1);
-    _canvas.println(message);
+    _canvas.setCursor(10, 80);
+    _canvas.print(message);
+    
+    drawBatteryIndicator();
+    push();
+}
+
+void DisplayManager::drawModalMessage(const String& title, const String& message, uint16_t titleColor) {
+    _canvas.fillRect(20, 30, 200, 75, TFT_BLACK); 
+    _canvas.drawRect(19, 29, 202, 77, TFT_DARKGREY); 
+    _canvas.drawRect(20, 30, 200, 75, TFT_LIGHTGREY); 
+    _canvas.fillRect(21, 31, 198, 14, TFT_DARKCYAN); 
+    
+    _canvas.setTextColor(TFT_WHITE);
+    _canvas.setTextSize(1);
+    _canvas.setCursor(24, 34);
+    _canvas.print(title);
+    
+    _canvas.setTextColor(titleColor);
+    _canvas.setTextSize(1);
+    _canvas.setCursor(24, 55);
+    _canvas.print(message);
+    
     drawBatteryIndicator();
     push();
 }

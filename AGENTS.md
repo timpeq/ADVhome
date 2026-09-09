@@ -40,6 +40,13 @@ The `deploy` script automatically waits for the device to be available on `/dev/
 The device has ~320KB of usable RAM. Home Assistant instances can have thousands of entities. 
 - *DO NOT* ingest all entities. Use `EntityManager::isSupportedDomain` to filter by domain.
 - For high-volume domains like `sensor`, always filter by `device_class` (e.g., `temperature`, `humidity`) inside the HTTP chunker and WebSocket listener in `HomeAssistantManager.cpp`.
+- *DO NOT* add large attributes to the base `Entity` struct, this causes massive heap fragmentation. For domains that need large rich attributes (like `climate` or `media_player`), store their states in a separate decoupled `std::map` inside `EntityManager`.
+
+**Flash Limit:**
+- Flash memory is extremely tight (~97% full). Avoid bringing in heavy dependencies or writing overly verbose template classes. Check `pio run` output sizes frequently.
+
+**Audio / I2S Peculiarities:**
+- Calling `M5.Mic.end()` or interfering with the internal microphone while `M5.Speaker` is running can cause the I2S/codec bus to hang and emit a screeching noise. Ensure that `M5.Mic.begin()` is active and avoid arbitrary `end()` calls during interactions.
 
 **UI Framework (TFT_eSPI):**
 - `AppController` manages the state machine and the `TabController`.

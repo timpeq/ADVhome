@@ -35,9 +35,17 @@ public:
     
     void callService(const String& domain, const String& service, const String& entity_id);
     void callSecureService(const String& domain, const String& service, const String& entity_id, const String& code);
+    
+    // Media controls
     void setMediaVolume(const String& entity_id, float volume);
-    void seekMedia(const String& entity_id, float position);
     void toggleMute(const String& entity_id, bool is_muted);
+    void seekMedia(const String& entity_id, float position);
+    
+    // Climate controls
+    void setClimateTemperature(const String& entity_id, float temp);
+    void setClimateTempRange(const String& entity_id, float low, float high);
+    void setHvacMode(const String& entity_id, const String& mode);
+    
     void adjustEntity(const String& entity_id, int direction);
     void sendConversation(const String& text);
     void setConversationCallback(ConversationCallback callback) { _conversationCallback = callback; }

@@ -55,9 +55,10 @@ private:
     bool _goToChat;
     String _voicePipelineName;
     ScrollRepeater _scrollRepeater;
+    ScrollRepeater _valueRepeater;
     
     void refreshValues();
-    void toggleCurrent();
+    void toggleCurrent(int direction = 1);
 };
 
 #endif // CONFIG_VIEW_H
