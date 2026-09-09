@@ -13,7 +13,9 @@ void EntityDetailView::setEntityId(const String& id) {
     _climateChangedLocally = false;
     _climatePendingSend = false;
     _volumeChangedLocally = false;
+    _volumePendingSend = false;
     _seekChangedLocally = false;
+    _seekPendingSend = false;
 }
 
 void EntityDetailView::draw(DisplayManager& display) {
@@ -437,6 +439,7 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
         // Custom Seek Logic
         if (keyboard.wasLeftPressed() || keyboard.wasRightPressed()) {
             _seekChangedLocally = false;
+            _seekPendingSend = false;
             _wasSeekHeld = false;
             _seekHoldStartTime = current_now;
         }
@@ -511,16 +514,32 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
             if (_entityManager.getMediaPlayerState(_entityId, ms) && _seekTarget > ms.duration) _seekTarget = ms.duration;
             
             _seekChangedLocally = true;
+            _seekPendingSend = true;
             _lastSeekChangeTime = now;
             handled = true;
         }
 
         // Debounce seek sending
-        if (_seekChangedLocally && (now - _lastSeekChangeTime > 500 || (!keyboard.isLeftHeld() && !keyboard.isRightHeld() && scrubSeekDir == 0))) {
-            if (_onSeekMedia) {
-                _onSeekMedia(entity.id, _seekTarget);
+        if (_seekPendingSend) {
+            if (now - _lastSeekChangeTime > 500 ||
+                (!keyboard.isLeftHeld() && !keyboard.isRightHeld() && scrubSeekDir == 0)) {
+                if (_onSeekMedia) {
+                    _onSeekMedia(entity.id, _seekTarget);
+                }
+                _seekPendingSend = false;
+                _seekSentAt = now;
             }
-            _seekChangedLocally = false;
+        } else if (_seekChangedLocally) {
+            // Same reasoning as the climate setpoint: dropping the scrub target
+            // at send time let the bar snap back to the pre-seek position for
+            // the length of the round trip. Hold it until the reported position
+            // lands near it, allowing for playback drift while we wait.
+            MediaPlayerState msSeek;
+            bool landed = _entityManager.getMediaPlayerState(_entityId, msSeek) &&
+                          fabsf(msSeek.position - _seekTarget) < 5.0f;
+            if (landed || now - _seekSentAt > 4000) {
+                _seekChangedLocally = false;
+            }
         }
 
         // Volume logic
@@ -532,19 +551,40 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
                 } else {
                     _volumeTarget = 0.0f;
                 }
+                _volumeBaseline = _volumeTarget;
             }
             _volumeTarget = constrain(_volumeTarget + volumeDelta, 0.0f, 1.0f);
             _volumeChangedLocally = true;
+            _volumePendingSend = true;
             _lastVolumeChangeTime = now;
             handled = true;
         }
 
         // Debounce volume sending (500ms after last change)
-        if (_volumeChangedLocally && (now - _lastVolumeChangeTime > 500 || (!keyboard.isUpHeld() && !keyboard.isDownHeld() && volumeDelta == 0.0f))) {
-            if (_onSetVolume) {
-                _onSetVolume(entity.id, _volumeTarget);
+        if (_volumePendingSend) {
+            if (now - _lastVolumeChangeTime > 500 ||
+                (!keyboard.isUpHeld() && !keyboard.isDownHeld() && volumeDelta == 0.0f)) {
+                if (_onSetVolume) {
+                    _onSetVolume(entity.id, _volumeTarget);
+                }
+                _volumePendingSend = false;
+                _volumeSentAt = now;
             }
-            _volumeChangedLocally = false;
+        } else if (_volumeChangedLocally) {
+            // Hold our own level until Home Assistant echoes one back. Accept any
+            // movement away from where the level started, not just an exact
+            // match: players that quantize volume land near the request, so
+            // waiting for equality would stall until the timeout.
+            MediaPlayerState msVol;
+            if (_entityManager.getMediaPlayerState(_entityId, msVol)) {
+                bool agrees = fabsf(msVol.volumeLevel - _volumeTarget) < 0.02f;
+                bool moved = fabsf(msVol.volumeLevel - _volumeBaseline) > 0.001f;
+                if (agrees || moved || now - _volumeSentAt > 3000) {
+                    _volumeChangedLocally = false;
+                }
+            } else if (now - _volumeSentAt > 3000) {
+                _volumeChangedLocally = false;
+            }
         }
     }
 

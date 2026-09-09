@@ -43,14 +43,19 @@ private:
     
     // Volume: optimistic local setpoint while an adjustment is in flight
     float _volumeTarget = 0.0f;
-    bool _volumeChangedLocally = false;
+    bool _volumeChangedLocally = false;   // showing our own value, not HA's
+    bool _volumePendingSend = false;      // that value has not been sent yet
+    float _volumeBaseline = 0.0f;         // server value when the edit started
     uint32_t _lastVolumeChangeTime = 0;
+    uint32_t _volumeSentAt = 0;
     
     // Seek: optimistic local setpoint
     float _seekTarget = 0.0f;
     uint32_t _seekHoldStartTime = 0;
     uint32_t _lastSeekChangeTime = 0;
     bool _seekChangedLocally = false;
+    bool _seekPendingSend = false;
+    uint32_t _seekSentAt = 0;
     bool _wasSeekHeld = false;
     
     // Climate: optimistic local setpoint while an adjustment is in flight.

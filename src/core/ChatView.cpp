@@ -12,12 +12,6 @@ void ChatView::addMessage(const String& message) {
     while (_messages.size() > 8) _messages.erase(_messages.begin());
 }
 
-void ChatView::onEnter() {
-    if (_messages.empty()) {
-        addMessage("HA: Type or hold the Go key while speaking.");
-    }
-}
-
 void ChatView::receiveResponse(const String& response) {
     addMessage("HA: " + response);
 }
@@ -87,6 +81,14 @@ void ChatView::draw(DisplayManager& display) {
     auto canvas = display.getCanvas();
     canvas->setTextSize(1);
     canvas->setTextColor(TFT_LIGHTGREY);
+
+    if (_messages.empty()) {
+        // A hint, not a message: nothing in _messages is anything but a real
+        // turn, and this is short enough that it never has to scroll.
+        canvas->setCursor(5, 23);
+        canvas->setTextColor(TFT_DARKGREY);
+        canvas->print("Type, or hold GO to speak.");
+    }
 
     int firstMessage = _messages.size() > 6 ? _messages.size() - 6 : 0;
     int y = 23;

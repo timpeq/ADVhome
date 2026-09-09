@@ -11,7 +11,6 @@ public:
 
     void draw(DisplayManager& display) override;
     bool handleInput(KeyboardManager& keyboard) override;
-    void onEnter() override;
     void receiveResponse(const String& response);
     void receiveVoiceEvent(const String& event);
 
