@@ -65,6 +65,13 @@ A normal build produces the application firmware and, through the post-build scr
 
 Use the merged image with a tool such as M5Burner when the complete flash image is required. The merged image contains the bootloader, partitions, and application firmware at their ESP32-S3 flash offsets.
 
+**Do not flash the merged image to a shared M5Launcher device.** It writes a
+partition table built from `advhome_partitions.csv`, which describes a single
+app filling the flash. Writing it to offset `0x0` replaces the launcher's
+multi-slot table and makes every other firmware on the device unreachable. The
+merged image is for a Cardputer dedicated to ADVhome. For a shared device, use
+`deploy`, which only writes the app slot.
+
 ### M5Launcher deployment
 
 The Nix shell provides a deployment helper for the configured M5Launcher slot:
@@ -73,13 +80,35 @@ The Nix shell provides a deployment helper for the configured M5Launcher slot:
 deploy
 ```
 
-This command builds the firmware and writes `firmware.bin` to offset `0x5e0000` on `/dev/ttyACM0`. It assumes:
+This command builds the firmware, reads the partition table from the connected
+device, resolves the app slot labelled `advhom`, checks that the image fits, and
+writes only that slot. The flash offset is never hardcoded: on a shared
+M5Launcher install the slot layout is whatever the launcher set up, and writing
+to a stale offset silently overwrites a neighbouring firmware instead of
+failing.
 
-- the Cardputer is connected at `/dev/ttyACM0`
-- PlatformIO has installed `esptool.py` under `~/.platformio/packages`
-- the target device is using the expected M5Launcher layout
+To see the connected device's partition table without building or writing:
 
-Change the device path or flash layout before using this workflow with different hardware.
+```sh
+ptable
+```
+
+Useful options:
+
+```sh
+deploy --dry-run          # resolve the slot and check the fit, write nothing
+deploy --slot cardpu      # target a different app slot by label
+ADVHOME_PORT=/dev/ttyACM1 deploy
+```
+
+`deploy` refuses to write when the slot is missing, when the image is larger
+than the slot, or when the device has no readable partition table. If the table
+itself is gone, `ptable.bin` in the repository is a known-good copy of this
+device's layout; restoring it is destructive and deliberate:
+
+```sh
+esptool.py --chip esp32s3 --port /dev/ttyACM0 write_flash 0x8000 ptable.bin
+```
 
 ## First boot
 
@@ -156,6 +185,7 @@ src/core/HomeAssistantManager.*
 src/core/EntityManager.*      Cached Home Assistant entities
 src/core/EntityList.*         Shared scrolling entity list (rows, scrollbar, type-ahead)
 src/core/*View.*              Main, detail, configuration, favorites, and diagnostic views
+tools/flash_slot.py           Resolves the target app slot from the device's partition table
 merge_firmware.py             Post-build merged ESP32-S3 image generation
 platformio.ini                PlatformIO target and dependencies
 flake.nix                     Reproducible Nix development shell and deploy helper

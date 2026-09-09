@@ -32,7 +32,15 @@ To build AND flash the firmware automatically, use the provided deploy script:
 ```sh
 nix develop --command deploy
 ```
-The `deploy` script automatically waits for the device to be available on `/dev/ttyACM0` and names the binaries consistently.
+The `deploy` script waits for the device, then reads the device's own partition
+table and writes the firmware into the app slot labelled `advhom`. It never uses
+a hardcoded flash offset, and it refuses to write when the slot is missing or
+the image does not fit. `ptable` prints the connected device's layout.
+
+**Never flash `firmware_merged.bin` to this device.** It carries a partition
+table generated from `advhome_partitions.csv` (a single app filling the flash);
+writing it to `0x0` destroys the M5Launcher multi-slot layout. That merged image
+is only for a Cardputer dedicated to ADVhome.
 
 ## System Architecture & Constraints
 

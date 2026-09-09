@@ -10,31 +10,46 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        
+
         myPython = pkgs.python3.withPackages (ps: with ps; [ pyserial ]);
-        
-        deployScript = pkgs.writeShellScriptBin "deploy" ''
-          set -e
-          echo "Building Firmware..."
-          pio run
-          echo "Uploading directly to M5Launcher OTA_3 slot (0x5e0000)..."
-          
-          # Find esptool.py from platformio packages
-          ESPTOOL=$(find ~/.platformio/packages -name "esptool.py" | head -n 1)
-          if [ -z "$ESPTOOL" ]; then
-            echo "Error: esptool.py not found in ~/.platformio/packages"
-            exit 1
-          fi
-          
-          echo "Waiting for device on /dev/ttyACM0 to become available (plug it in or reset)..."
-          while [ ! -e /dev/ttyACM0 ]; do
+
+        # The Cardputer is a shared M5Launcher install, so the app slot ADVhome
+        # belongs in is one of several. flash_slot.py reads the device's own
+        # partition table and resolves the slot by label rather than trusting a
+        # hardcoded offset, which is wrong the moment the layout changes and
+        # silently eats a neighbouring firmware when it is.
+        waitForPort = ''
+          PORT="''${ADVHOME_PORT:-/dev/ttyACM0}"
+          ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+          cd "$ROOT"
+
+          echo "Waiting for device on $PORT (plug it in or reset)..."
+          while [ ! -e "$PORT" ]; do
             sleep 0.5
           done
-          echo "Device found!"
-          
-          # Run upload using the nix python3
-          ${myPython}/bin/python3 "$ESPTOOL" --port /dev/ttyACM0 write_flash 0x5e0000 .pio/build/m5stack-stamps3/firmware.bin
-          echo "Success! Please reset your device."
+          echo "Device found."
+        '';
+
+        deployScript = pkgs.writeShellScriptBin "deploy" ''
+          set -e
+          ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+          cd "$ROOT"
+
+          echo "Building firmware..."
+          pio run
+
+          ${waitForPort}
+
+          exec ${myPython}/bin/python3 "$ROOT/tools/flash_slot.py" \
+            --port "$PORT" "$@"
+        '';
+
+        ptableScript = pkgs.writeShellScriptBin "ptable" ''
+          set -e
+          ${waitForPort}
+
+          exec ${myPython}/bin/python3 "$ROOT/tools/flash_slot.py" \
+            --port "$PORT" --show "$@"
         '';
       in
       {
@@ -42,13 +57,20 @@
           buildInputs = with pkgs; [
             platformio
             myPython
+            git
             deployScript
+            ptableScript
           ];
-          
+
           shellHook = ''
             echo "ADVhome PlatformIO Environment"
-            echo "Run 'pio run' to build the project."
-            echo "Run 'deploy' to build and flash directly to M5Launcher."
+            echo "  pio run   - build the firmware"
+            echo "  ptable    - show the connected device's partition table"
+            echo "  deploy    - build, then flash into the 'advhom' app slot"
+            echo ""
+            echo "  deploy --dry-run   resolve the slot and check the fit only"
+            echo "  deploy --slot NAME target a different app slot"
+            echo "  ADVHOME_PORT=...   use a port other than /dev/ttyACM0"
           '';
         };
       }
