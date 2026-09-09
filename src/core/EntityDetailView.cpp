@@ -373,7 +373,7 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
     bool handled = false;
 
     if (entity.domain == "climate") {
-        if (keyboard.wasBackspacePressed()) {
+        if (keyboard.wasBackspacePressed() || keyboard.wasTabPressed()) {
             if (_onBack) _onBack();
             return true;
         }
@@ -390,7 +390,7 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
     int scrubSeekDir = 0;
 
     // 1. Evaluate explicit keys
-    if (keyboard.wasBackspacePressed()) {
+    if (keyboard.wasBackspacePressed() || keyboard.wasTabPressed()) {
         actionBack = true;
     }
 

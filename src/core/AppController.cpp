@@ -396,7 +396,8 @@ void AppController::drawCurrentState() {
             String waiting = "Waiting";
             for (int i = 0; i < dots; i++) waiting += ".";
             _display.clear();
-            _display.drawModalMessage("ADVhome", "Connecting to " + _ssid + "\n" + waiting, TFT_YELLOW);
+            String displaySsid = _ssid.isEmpty() ? _config.getWifiSSID() : _ssid;
+            _display.drawModalMessage("ADVhome", "Connecting to " + displaySsid + "\n" + waiting, TFT_YELLOW);
             break;
         }
             
@@ -415,7 +416,7 @@ void AppController::drawCurrentState() {
             if (_redraw) { 
                 hadots = (hadots + 1) % 4;
             }
-            String hawaiting = "Connecting";
+            String hawaiting = "Waiting";
             for (int i = 0; i < hadots; i++) hawaiting += ".";
             _display.clear();
             _display.drawModalMessage("ADVhome", "Connecting to " + _config.getHAUrl() + "\n" + hawaiting, TFT_CYAN);

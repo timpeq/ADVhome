@@ -128,7 +128,7 @@ bool ChatView::handleInput(KeyboardManager& keyboard) {
     }
 
     for (char character : keyboard.getNewChars()) {
-        if (_input.length() < 80 && character >= 32) {
+        if (_input.length() < 80 && character >= 32 && character != 127) {
             _input += character;
             handled = true;
         }
