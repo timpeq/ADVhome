@@ -12,6 +12,7 @@ public:
     bool wasSpacePressed() const;
     bool wasBackspacePressed() const;
     bool wasTabPressed() const;
+    bool wasEscPressed() const;
     bool wasUpPressed() const;
     bool wasDownPressed() const;
     bool wasLeftPressed() const;

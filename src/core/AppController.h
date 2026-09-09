@@ -15,6 +15,9 @@
 #include "HomeView.h"
 #include "EntityDetailView.h"
 #include "ChatView.h"
+#include "MenuView.h"
+#include "AboutView.h"
+#include "NetworkView.h"
 #include <Arduino.h>
 
 enum class AppState {
@@ -48,6 +51,10 @@ private:
     HomeView* _homeView = nullptr;
     ConfigView* _configView = nullptr;
     ChatView* _chatView = nullptr;
+    MenuView* _menuView = nullptr;
+    AboutView* _aboutView = nullptr;
+    NetworkView* _wifiView = nullptr;
+    NetworkView* _haView = nullptr;
     EntityDetailView* _detailView = nullptr;
     
     bool _isDetailViewActive = false;
@@ -83,6 +90,18 @@ private:
     void updateHAConnecting();
     void updateHAConnected();
     void checkPowerManagement();
+
+    // Credentials are re-read only at boot, so every reconfiguration action
+    // clears the relevant keys and restarts rather than trying to tear down a
+    // live HomeAssistantManager that the views still hold references to.
+    void rebootWithMessage(const char* message);
+    bool handleConnectionRecoveryKeys(bool allowHaReset);
+    String recoveryHint() const;
+
+    // Recovery keys are armed by the first press and act on the second, so a
+    // stray keystroke on a reconnect screen cannot wipe credentials.
+    uint8_t _recoveryArmed = 0;  // 0 = none, 1 = Wi-Fi, 2 = Home Assistant
+    uint32_t _recoveryArmedAt = 0;
     
     // Draw handlers
     void drawCurrentState();

@@ -3,6 +3,10 @@
 #include "TextScroller.h"
 #include <M5Cardputer.h>
 
+#ifndef ADVHOME_VERSION
+#define ADVHOME_VERSION "dev"
+#endif
+
 void AppController::begin() {
     _display.begin();
     _config.begin();
@@ -146,6 +150,21 @@ void AppController::updateInputPassword() {
 }
 
 void AppController::updateConnecting() {
+    // Nothing is initialised yet at this point, so this is a plain state change
+    // rather than the reboot the later screens need.
+    if (_keyboard.wasEscPressed()) {
+        _config.clearWifiConfig();
+        WiFi.disconnect(true);
+        _ssid = "";
+        _password = "";
+        _currentInput = "";
+        _selectedNetwork = 0;
+        _scrollOffset = 0;
+        _currentState = AppState::SCANNING;
+        _redraw = true;
+        return;
+    }
+
     if (_wifi.isConnected()) {
         _config.saveWifiConfig(_ssid, _password);
         _currentState = AppState::CONNECTED;
@@ -196,6 +215,8 @@ void AppController::updateHAConnecting() {
         _currentState = AppState::CONNECTING;
         return;
     }
+
+    if (handleConnectionRecoveryKeys(true)) return;
 
     if (!_haManager) {
         _haManager = new HomeAssistantManager(_config, _entityManager);
@@ -300,11 +321,43 @@ void AppController::updateHAConnected() {
         
         _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSeekMedia, onSecureService, onSetClimateTemp, onSetClimateRange, onSetHvacMode);
         
+        _aboutView = new AboutView(_config);
+
+        _wifiView = new NetworkView(
+            "Wi-Fi", "Forget network and rescan",
+            [this](std::vector<String>& out) {
+                out.push_back("SSID: " + _config.getWifiSSID());
+                out.push_back("IP:   " + _wifi.getIPAddress());
+                out.push_back("RSSI: " + String(WiFi.RSSI()) + " dBm");
+            },
+            [this]() {
+                _config.clearWifiConfig();
+                rebootWithMessage("Forgetting network...");
+            });
+
+        _haView = new NetworkView(
+            "Home Assistant", "Clear server and token",
+            [this](std::vector<String>& out) {
+                out.push_back("URL: " + _config.getHAUrl());
+                out.push_back("Ver: " + _haManager->getVersion());
+                out.push_back("Setup runs again on reboot.");
+            },
+            [this]() {
+                _config.clearHAConfig();
+                rebootWithMessage("Clearing HA setup...");
+            });
+
+        _menuView = new MenuView(_config, ADVHOME_VERSION);
+        _menuView->addItem("Settings", _configView);
+        _menuView->addItem("Wi-Fi", _wifiView);
+        _menuView->addItem("Home Assistant", _haView);
+        _menuView->addItem("About & License", _aboutView);
+
         _tabController.addView(_homeView, "Home");
         _tabController.addView(_chatView, "Chat");
         _tabController.setViewVisible(_chatView, _config.getShowChat());
         _tabController.addView(_entitiesView, "Entities");
-        _tabController.addView(_configView, "Config");
+        _tabController.addView(_menuView, "Menu");
     }
     
     bool wasDetailActive = _isDetailViewActive;
@@ -337,6 +390,10 @@ void AppController::updateHAConnected() {
     }
     
     if (isDisconnected) {
+        // Input is otherwise ignored while disconnected, so this is the only way
+        // back out if the network or the server has moved.
+        if (handleConnectionRecoveryKeys(true)) return;
+
         static uint32_t lastDot = 0;
         static int dots = 0;
         if (millis() - lastDot > 500) {
@@ -356,12 +413,14 @@ void AppController::updateHAConnected() {
             if (isWifiDisc) {
                 String msg = "Connecting to " + _config.getWifiSSID() + waiting;
                 String line1 = TextScroller::visible(msg, 32);
-                _display.drawModalMessage("ADVhome", line1, "", TFT_YELLOW);
+                _display.drawModalMessage("ADVhome", line1, "", TFT_YELLOW, TFT_CYAN,
+                                          recoveryHint());
             } else {
                 String line1 = "Connected to " + _config.getWifiSSID();
                 String msg2 = "Connecting to " + _config.getHAUrl() + waiting;
                 String line2 = TextScroller::visible(msg2, 32);
-                _display.drawModalMessage("ADVhome", line1, line2, TFT_GREEN, TFT_CYAN);
+                _display.drawModalMessage("ADVhome", line1, line2, TFT_GREEN, TFT_CYAN,
+                                          recoveryHint());
             }
             _redraw = false;
         }
@@ -407,7 +466,8 @@ void AppController::drawCurrentState() {
             String displaySsid = _ssid.isEmpty() ? _config.getWifiSSID() : _ssid;
             String msg = "Connecting to " + displaySsid + waiting;
             String line1 = TextScroller::visible(msg, 32);
-            _display.drawModalMessage("ADVhome", line1, "", TFT_YELLOW);
+            _display.drawModalMessage("ADVhome", line1, "", TFT_YELLOW, TFT_CYAN,
+                                      "ESC: pick another network");
             break;
         }
             
@@ -432,7 +492,8 @@ void AppController::drawCurrentState() {
             String line1 = "Connected to " + _config.getWifiSSID();
             String msg2 = "Connecting to " + _config.getHAUrl() + hawaiting;
             String line2 = TextScroller::visible(msg2, 32);
-            _display.drawModalMessage("ADVhome", line1, line2, TFT_GREEN, TFT_CYAN);
+            _display.drawModalMessage("ADVhome", line1, line2, TFT_GREEN, TFT_CYAN,
+                                      recoveryHint());
             break;
         }
             
@@ -543,4 +604,58 @@ void AppController::checkPowerManagement() {
         _powerState = PowerState::DIM;
         M5.Display.setBrightness(10);
     }
+}
+
+void AppController::rebootWithMessage(const char* message) {
+    _display.drawMessage("ADVhome", message, TFT_YELLOW);
+    delay(1200);
+    ESP.restart();
+}
+
+bool AppController::handleConnectionRecoveryKeys(bool allowHaReset) {
+    // Reachable from any screen that can strand the user: if the saved network
+    // is gone or the Home Assistant URL is wrong, the device would otherwise
+    // retry forever with no way in. Both actions are destructive, so the first
+    // press only arms them.
+    if (_recoveryArmed != 0 && millis() - _recoveryArmedAt > 8000) {
+        _recoveryArmed = 0;
+        _redraw = true;
+    }
+
+    uint8_t requested = 0;
+    if (_keyboard.wasEscPressed()) {
+        requested = 1;
+    } else if (allowHaReset) {
+        for (char ch : _keyboard.getNewChars()) {
+            if (ch == 'h' || ch == 'H') {
+                requested = 2;
+                break;
+            }
+        }
+    }
+
+    if (requested == 0) return false;
+
+    if (_recoveryArmed != requested) {
+        _recoveryArmed = requested;
+        _recoveryArmedAt = millis();
+        _redraw = true;
+        return false;
+    }
+
+    _recoveryArmed = 0;
+    if (requested == 1) {
+        _config.clearWifiConfig();
+        rebootWithMessage("Forgetting network...");
+    } else {
+        _config.clearHAConfig();
+        rebootWithMessage("Clearing HA setup...");
+    }
+    return true;
+}
+
+String AppController::recoveryHint() const {
+    if (_recoveryArmed == 1) return "ESC again: forget Wi-Fi";
+    if (_recoveryArmed == 2) return "H again: clear HA setup";
+    return "ESC: Wi-Fi   H: HA setup";
 }

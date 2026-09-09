@@ -10,6 +10,8 @@
 - [x] Fix general time display in media player by tracking time locally instead of waiting for HA updates.
 - [x] Fix the 'modal' view of the details so it doesn't change the top bar and looks like a window below the entity.
 - [ ] Add cursor-based navigation from list boundaries into the top-level tabs.
+- [x] Replace the flat Config tab with a Menu tab holding Settings, Wi-Fi, Home Assistant, and About.
+- [x] Add an on-device About & License page so attribution survives a firmware-only install.
 - [ ] Enhance the climate/thermostat widget in the Entity Detail View to cleanly display both the current ambient temperature and the target set temperature.
 
 ## Phase 2: Home Dashboard Completion
@@ -39,6 +41,36 @@
 - [x] Put Favorites first in the Entities sub-tab sequence, then alphabetize domains with `All` second.
 - [ ] Add explicit service capability checks before showing controls for each Home Assistant domain.
 - [ ] Add a small widget layout test or rendering fixture for overflow and screen bounds.
-- [ ] Add a reset or reconfiguration action for Wi-Fi and Home Assistant credentials.
+- [x] Add a reset or reconfiguration action for Wi-Fi and Home Assistant credentials.
 - [ ] Add optional authenticated Home Assistant album-art thumbnails using a bounded JPEG cache.
 - [ ] Keep generated PlatformIO build output out of future feature commits unless a release artifact is intentionally required.
+
+## Phase 5: Connection Management
+
+The basics are in: the Menu tab has Wi-Fi and Home Assistant pages that show the
+current connection and can clear it, and the connecting/reconnecting screens
+accept `ESC` (Wi-Fi) and `H` (Home Assistant) so a device with a bad saved
+network is never stranded. Everything below is deferred.
+
+- [x] Show current SSID, IP, and RSSI on a Wi-Fi page reachable from the Menu.
+- [x] Show the Home Assistant URL and version on a Home Assistant page.
+- [x] Confirm-before-clearing on both, with an auto-disarming confirmation.
+- [x] Offer credential recovery keys from the connecting and reconnecting screens.
+- [ ] Reconfigure without rebooting. Clearing credentials currently restarts the
+      device, because `HomeAssistantManager` reads config only in `begin()` and
+      the views hold references to it. Needs a teardown/rebuild path, or a
+      manager that can re-read config and reconnect in place.
+- [ ] Store multiple Wi-Fi profiles instead of a single SSID/password pair.
+      `ConfigManager` currently keeps one of each in NVS; this needs a list, a
+      selected index, and a migration for existing single-profile devices.
+- [ ] Auto-try the next profile on connection failure, with a bounded number of
+      attempts before falling back to the scan list.
+- [ ] Pick the strongest known profile at boot instead of the last one used.
+- [ ] Edit Wi-Fi credentials on the device rather than only forgetting and
+      re-entering them.
+- [ ] Re-open the browser setup portal on demand from the Home Assistant page,
+      instead of only reaching it by clearing the config and rebooting.
+- [ ] Store multiple Home Assistant server profiles (home vs. remote URL) and
+      pick between them.
+- [ ] Add a "Test connection" action that validates a URL and token before
+      saving, so a typo does not require a reboot to discover.

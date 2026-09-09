@@ -145,6 +145,7 @@ Create the long-lived access token in Home Assistant from your user profile page
 - `Tab`: switch between interface sections where supported
 - Typing letters: jump to the first entity whose name starts with what you typed
 - `Ctrl-F`: add or remove the selected entity from Favorites
+- `Backspace` / `Esc` in the Menu tab: return from a page to the menu list
 
 The Chat tab sends text through Home Assistant's authenticated WebSocket
 `conversation/process` command and keeps the returned conversation ID for
@@ -171,10 +172,39 @@ effort (about 2-4 additional weeks), mainly because of audio buffering,
 encoding/decoding, and limited RAM. A text Chat fallback should remain even
 after voice support is added.
 
-The Config view exposes UI options such as battery visibility, Chat tab visibility,
-reconnect interval, back-button behavior, and scroll repeat timing. Chat is enabled by
-default and can be hidden without disabling the rest of the Home Assistant
-connection or entity controls.
+## Menu
+
+The rightmost tab is the Menu, drawn as a hamburger icon. It shows the app name
+and the build's git revision, and opens four pages:
+
+- **Settings** — the former Config list: battery visibility, Chat tab visibility,
+  reconnect interval, back-button behavior, scroll repeat timing, TTS volume and
+  pipeline, power timeouts, and the Diagnostics page. Chat is enabled by default
+  and can be hidden without disabling the rest of the Home Assistant connection
+  or entity controls.
+- **Wi-Fi** — the current SSID, IP address, and signal strength, with an action
+  that forgets the saved network.
+- **Home Assistant** — the configured URL and the server's version, with an
+  action that clears the saved URL and token.
+- **About & License** — version, copyright, license, and the attribution for
+  every library compiled into the firmware.
+
+Both destructive actions require pressing Enter twice; the confirmation disarms
+itself after a few seconds. Because credentials are read only at startup, either
+action clears the relevant keys and restarts the device, which then re-enters
+Wi-Fi selection or the browser setup portal as appropriate.
+
+## Recovering a stranded device
+
+If the saved network has gone away or the Home Assistant URL is wrong, the device
+would otherwise retry forever with no way into its own settings. The connecting
+and reconnecting screens accept:
+
+- `ESC` — forget the Wi-Fi network and restart into the scan list
+- `H` — clear the Home Assistant URL and token and restart into the setup portal
+
+On the initial Wi-Fi connecting screen, `ESC` returns to the network list
+directly without a restart.
 
 ## Project layout
 
@@ -190,6 +220,9 @@ src/core/HomeAssistantManager.*
                              Home Assistant WebSocket and API integration
 src/core/EntityManager.*      Cached Home Assistant entities
 src/core/EntityList.*         Shared scrolling entity list (rows, scrollbar, type-ahead)
+src/core/MenuView.*           Menu tab; hosts the pages below as sub-views
+src/core/AboutView.*          On-device about, license, and attribution page
+src/core/NetworkView.*        Connection summary with a confirmed reset action
 src/core/*View.*              Main, detail, configuration, favorites, and diagnostic views
 tools/flash_slot.py           Resolves the target app slot from the device's partition table
 merge_firmware.py             Post-build merged ESP32-S3 image generation
@@ -224,3 +257,35 @@ pio device monitor
 ```
 
 Serial logs include Wi-Fi and Home Assistant connection status.
+
+## License
+
+ADVhome is released under the [MIT License](LICENSE).
+
+The firmware statically links `arduinoWebSockets` and the Arduino ESP32 core, both
+LGPL-2.1. If you redistribute a prebuilt binary on its own, pair it with a link to
+the source at that revision. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+## Credits
+
+ADVhome is a thin layer on top of work done by other people:
+
+- **M5Stack** for [M5Unified](https://github.com/m5stack/M5Unified),
+  [M5GFX](https://github.com/m5stack/M5GFX) and
+  [M5Cardputer](https://github.com/m5stack/M5Cardputer), and for building hardware
+  worth writing firmware for
+- **lovyan03**, whose [LovyanGFX](https://github.com/lovyan03/LovyanGFX) M5GFX
+  derives from, and which is the reason anything renders at all
+- **Benoit Blanchon** for [ArduinoJson](https://arduinojson.org/), which does the
+  unglamorous work in every single message this firmware handles
+- **Markus Sattler** for
+  [arduinoWebSockets](https://github.com/Links2004/arduinoWebSockets)
+- **Espressif** for the ESP32 Arduino core and ESP-IDF
+- **The Home Assistant project** and its contributors, for an API good enough that
+  a $30 handheld can be a real client, and for the Assist pipeline that makes the
+  voice features possible
+- **Bruno Morcelli** for [M5Launcher](https://github.com/bmorcelli/M5Stick-Launcher),
+  which is how most people will actually install this
+
+Development was AI-assisted, primarily with Google Antigravity and Claude Code.
+See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the full picture.

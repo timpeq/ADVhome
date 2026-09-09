@@ -16,7 +16,7 @@ public:
     
     // Screens
     void drawMessage(const String& title, const String& message, uint16_t titleColor = TFT_YELLOW);
-    void drawModalMessage(const String& title, const String& line1, const String& line2 = "", uint16_t color1 = TFT_YELLOW, uint16_t color2 = TFT_CYAN);
+    void drawModalMessage(const String& title, const String& line1, const String& line2 = "", uint16_t color1 = TFT_YELLOW, uint16_t color2 = TFT_CYAN, const String& hint = "");
     void drawMenu(const String& title, const std::vector<String>& items, int selectedIndex, int scrollOffset);
     void drawPasswordInput(const String& title, const String& subtitle, const String& currentInput);
     void drawHASetup(const String& ipAddress);

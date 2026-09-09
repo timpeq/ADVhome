@@ -52,7 +52,10 @@ void ConfigView::refreshValues() {
 
 void ConfigView::onEnter() {
     refreshValues();
+    // Reset both: leaving the selection at 0 while the list stays scrolled draws
+    // a page with no visible highlight, and Up cannot recover from it.
     _selectedIndex = 0;
+    _scrollOffset = 0;
 }
 
 void ConfigView::draw(DisplayManager& display) {

@@ -89,6 +89,9 @@ void TabController::drawTabBar(DisplayManager& display, bool showBattery) {
         
         if (_tabs[i].name == "Home") {
             Graphics::drawHomeIcon(*canvas, (visibleIndex * tabWidth) + (tabWidth / 2), 8, TFT_WHITE);
+        } else if (_tabs[i].name == "Menu") {
+            Graphics::drawMenuIcon(*canvas, (visibleIndex * tabWidth) + (tabWidth / 2), 8,
+                                   i == (size_t)_currentTabIndex ? TFT_WHITE : TFT_LIGHTGREY);
         } else {
             // Center text roughly
             int textX = (visibleIndex * tabWidth) + (tabWidth / 2) - (_tabs[i].name.length() * 3);

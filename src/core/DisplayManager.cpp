@@ -31,7 +31,7 @@ void DisplayManager::drawMessage(const String& title, const String& message, uin
     push();
 }
 
-void DisplayManager::drawModalMessage(const String& title, const String& line1, const String& line2, uint16_t color1, uint16_t color2) {
+void DisplayManager::drawModalMessage(const String& title, const String& line1, const String& line2, uint16_t color1, uint16_t color2, const String& hint) {
     _canvas.fillRect(20, 30, 200, 75, TFT_BLACK); 
     _canvas.drawRect(19, 29, 202, 77, TFT_DARKGREY); 
     _canvas.drawRect(20, 30, 200, 75, TFT_LIGHTGREY); 
@@ -51,6 +51,15 @@ void DisplayManager::drawModalMessage(const String& title, const String& line1, 
         _canvas.setTextColor(color2);
         _canvas.setCursor(24, 75);
         _canvas.print(line2);
+    }
+    
+    // Recovery keys live outside the modal frame: they are always available on a
+    // connecting screen, but they should not read as part of the status message.
+    if (!hint.isEmpty()) {
+        _canvas.setTextColor(TFT_DARKGREY);
+        _canvas.setTextSize(1);
+        _canvas.setCursor(24, 114);
+        _canvas.print(hint);
     }
     
     drawBatteryIndicator();

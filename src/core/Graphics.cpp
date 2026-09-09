@@ -8,6 +8,12 @@ void drawHomeIcon(M5Canvas& canvas, int centerX, int centerY, uint16_t color) {
     canvas.fillRect(centerX - 2, centerY + 2, 4, 7, TFT_BLACK);
 }
 
+void drawMenuIcon(M5Canvas& canvas, int centerX, int centerY, uint16_t color) {
+    for (int i = -1; i <= 1; i++) {
+        canvas.fillRect(centerX - 7, centerY + (i * 4) - 1, 14, 2, color);
+    }
+}
+
 void drawLightIcon(M5Canvas& canvas, int centerX, int centerY, bool isOn, uint16_t color) {
     uint16_t iconColor = isOn ? color : TFT_DARKGREY;
     canvas.fillCircle(centerX, centerY, 5, iconColor);

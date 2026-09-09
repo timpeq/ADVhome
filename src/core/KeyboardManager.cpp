@@ -45,6 +45,10 @@ std::vector<char> KeyboardManager::getNewChars() const {
     return new_chars;
 }
 
+bool KeyboardManager::wasEscPressed() const {
+    return _currentStatus.esc && !_lastStatus.esc;
+}
+
 bool KeyboardManager::wasTabPressed() const {
     return _currentStatus.tab && !_lastStatus.tab;
 }
