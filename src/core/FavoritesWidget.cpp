@@ -5,10 +5,17 @@ FavoritesWidget::FavoritesWidget(EntityManager& entityManager, ConfigManager& co
 
 void FavoritesWidget::draw(DisplayManager& display) {
     auto canvas = display.getCanvas();
-    canvas->setCursor(5, 21);
-    canvas->setTextColor(TFT_CYAN);
-    canvas->setTextSize(1);
-    canvas->print("Favorites");
+    
+    if (_favoritesView.getScrollOffset() == 0) {
+        canvas->setCursor(5, 21);
+        canvas->setTextColor(TFT_CYAN);
+        canvas->setTextSize(1);
+        canvas->print("Favorites");
+        _favoritesView.setTopY(40);
+    } else {
+        _favoritesView.setTopY(25);
+    }
+    
     _favoritesView.draw(display);
 }
 

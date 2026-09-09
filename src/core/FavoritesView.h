@@ -14,6 +14,9 @@ public:
     void onEnter() override;
     void draw(DisplayManager& display) override;
     bool handleInput(KeyboardManager& keyboard) override;
+    
+    int getScrollOffset() const { return _scrollOffset; }
+    void setTopY(int topY) { _topY = topY; }
 
 private:
     EntityManager& _entityManager;

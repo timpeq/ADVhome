@@ -351,9 +351,9 @@ void AppController::updateHAConnected() {
             for (int i = 0; i < dots; i++) waiting += ".";
             
             if (isWifiDisc) {
-                _display.drawModalMessage("WiFi Disconnected", waiting, TFT_YELLOW);
+                _display.drawModalMessage("ADVhome", "Connecting to " + _config.getWifiSSID() + "\n" + waiting, TFT_YELLOW);
             } else {
-                _display.drawModalMessage("HA Disconnected", waiting, TFT_CYAN);
+                _display.drawModalMessage("ADVhome", "Connecting to " + _config.getHAUrl() + "\n" + waiting, TFT_CYAN);
             }
             _redraw = false;
         }
@@ -396,7 +396,7 @@ void AppController::drawCurrentState() {
             String waiting = "Waiting";
             for (int i = 0; i < dots; i++) waiting += ".";
             _display.clear();
-            _display.drawModalMessage("WiFi: " + _ssid, waiting, TFT_YELLOW);
+            _display.drawModalMessage("ADVhome", "Connecting to " + _ssid + "\n" + waiting, TFT_YELLOW);
             break;
         }
             
@@ -418,7 +418,7 @@ void AppController::drawCurrentState() {
             String hawaiting = "Connecting";
             for (int i = 0; i < hadots; i++) hawaiting += ".";
             _display.clear();
-            _display.drawModalMessage("Home Assistant", hawaiting, TFT_CYAN);
+            _display.drawModalMessage("ADVhome", "Connecting to " + _config.getHAUrl() + "\n" + hawaiting, TFT_CYAN);
             break;
         }
             
