@@ -31,7 +31,7 @@ void DisplayManager::drawMessage(const String& title, const String& message, uin
     push();
 }
 
-void DisplayManager::drawModalMessage(const String& title, const String& message, uint16_t titleColor) {
+void DisplayManager::drawModalMessage(const String& title, const String& line1, const String& line2, uint16_t color1, uint16_t color2) {
     _canvas.fillRect(20, 30, 200, 75, TFT_BLACK); 
     _canvas.drawRect(19, 29, 202, 77, TFT_DARKGREY); 
     _canvas.drawRect(20, 30, 200, 75, TFT_LIGHTGREY); 
@@ -42,10 +42,16 @@ void DisplayManager::drawModalMessage(const String& title, const String& message
     _canvas.setCursor(24, 34);
     _canvas.print(title);
     
-    _canvas.setTextColor(titleColor);
+    _canvas.setTextColor(color1);
     _canvas.setTextSize(1);
     _canvas.setCursor(24, 55);
-    _canvas.print(message);
+    _canvas.print(line1);
+    
+    if (!line2.isEmpty()) {
+        _canvas.setTextColor(color2);
+        _canvas.setCursor(24, 75);
+        _canvas.print(line2);
+    }
     
     drawBatteryIndicator();
     push();

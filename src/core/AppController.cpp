@@ -1,4 +1,7 @@
 #include "AppController.h"
+#include "Graphics.h"
+#include "TextScroller.h"
+#include <M5Cardputer.h>
 
 void AppController::begin() {
     _display.begin();
@@ -347,13 +350,18 @@ void AppController::updateHAConnected() {
             _tabController.drawActiveView(_display);
             if (_isDetailViewActive) _detailView->draw(_display);
             
-            String waiting = "Waiting";
+            String waiting = "";
             for (int i = 0; i < dots; i++) waiting += ".";
             
             if (isWifiDisc) {
-                _display.drawModalMessage("ADVhome", "Connecting to " + _config.getWifiSSID() + "\n" + waiting, TFT_YELLOW);
+                String msg = "Connecting to " + _config.getWifiSSID() + waiting;
+                String line1 = TextScroller::visible(msg, 32);
+                _display.drawModalMessage("ADVhome", line1, "", TFT_YELLOW);
             } else {
-                _display.drawModalMessage("ADVhome", "Connecting to " + _config.getHAUrl() + "\n" + waiting, TFT_CYAN);
+                String line1 = "Connected to " + _config.getWifiSSID();
+                String msg2 = "Connecting to " + _config.getHAUrl() + waiting;
+                String line2 = TextScroller::visible(msg2, 32);
+                _display.drawModalMessage("ADVhome", line1, line2, TFT_GREEN, TFT_CYAN);
             }
             _redraw = false;
         }
@@ -393,11 +401,13 @@ void AppController::drawCurrentState() {
             if (_redraw) { 
                 dots = (dots + 1) % 4;
             }
-            String waiting = "Waiting";
+            String waiting = "";
             for (int i = 0; i < dots; i++) waiting += ".";
             _display.clear();
             String displaySsid = _ssid.isEmpty() ? _config.getWifiSSID() : _ssid;
-            _display.drawModalMessage("ADVhome", "Connecting to " + displaySsid + "\n" + waiting, TFT_YELLOW);
+            String msg = "Connecting to " + displaySsid + waiting;
+            String line1 = TextScroller::visible(msg, 32);
+            _display.drawModalMessage("ADVhome", line1, "", TFT_YELLOW);
             break;
         }
             
@@ -416,10 +426,13 @@ void AppController::drawCurrentState() {
             if (_redraw) { 
                 hadots = (hadots + 1) % 4;
             }
-            String hawaiting = "Waiting";
+            String hawaiting = "";
             for (int i = 0; i < hadots; i++) hawaiting += ".";
             _display.clear();
-            _display.drawModalMessage("ADVhome", "Connecting to " + _config.getHAUrl() + "\n" + hawaiting, TFT_CYAN);
+            String line1 = "Connected to " + _config.getWifiSSID();
+            String msg2 = "Connecting to " + _config.getHAUrl() + hawaiting;
+            String line2 = TextScroller::visible(msg2, 32);
+            _display.drawModalMessage("ADVhome", line1, line2, TFT_GREEN, TFT_CYAN);
             break;
         }
             
