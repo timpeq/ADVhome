@@ -309,11 +309,11 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                                 stateObj["attributes"]["is_volume_muted"] | false);
                         } else if (entity_id.startsWith("climate.")) {
                             ClimateState climate;
-                            climate.currentTemperature = stateObj["attributes"]["current_temperature"].as<float>();
-                            climate.targetTemperature = stateObj["attributes"]["temperature"].as<float>();
-                            climate.targetTempHigh = stateObj["attributes"]["target_temp_high"].as<float>();
-                            climate.targetTempLow = stateObj["attributes"]["target_temp_low"].as<float>();
-                            climate.currentHumidity = stateObj["attributes"]["current_humidity"].as<float>();
+                            if (!stateObj["attributes"]["current_temperature"].isNull()) climate.currentTemperature = stateObj["attributes"]["current_temperature"].as<float>();
+                            if (!stateObj["attributes"]["temperature"].isNull()) climate.targetTemperature = stateObj["attributes"]["temperature"].as<float>();
+                            if (!stateObj["attributes"]["target_temp_high"].isNull()) climate.targetTempHigh = stateObj["attributes"]["target_temp_high"].as<float>();
+                            if (!stateObj["attributes"]["target_temp_low"].isNull()) climate.targetTempLow = stateObj["attributes"]["target_temp_low"].as<float>();
+                            if (!stateObj["attributes"]["current_humidity"].isNull()) climate.currentHumidity = stateObj["attributes"]["current_humidity"].as<float>();
                             climate.minTemp = stateObj["attributes"]["min_temp"] | 7.0f;
                             climate.maxTemp = stateObj["attributes"]["max_temp"] | 35.0f;
                             climate.targetTempStep = stateObj["attributes"]["target_temp_step"] | 0.5f;
@@ -361,11 +361,11 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                                 eventData["new_state"]["attributes"]["is_volume_muted"] | false);
                         } else if (entity_id.startsWith("climate.")) {
                             ClimateState climate;
-                            climate.currentTemperature = eventData["new_state"]["attributes"]["current_temperature"].as<float>();
-                            climate.targetTemperature = eventData["new_state"]["attributes"]["temperature"].as<float>();
-                            climate.targetTempHigh = eventData["new_state"]["attributes"]["target_temp_high"].as<float>();
-                            climate.targetTempLow = eventData["new_state"]["attributes"]["target_temp_low"].as<float>();
-                            climate.currentHumidity = eventData["new_state"]["attributes"]["current_humidity"].as<float>();
+                            if (!eventData["new_state"]["attributes"]["current_temperature"].isNull()) climate.currentTemperature = eventData["new_state"]["attributes"]["current_temperature"].as<float>();
+                            if (!eventData["new_state"]["attributes"]["temperature"].isNull()) climate.targetTemperature = eventData["new_state"]["attributes"]["temperature"].as<float>();
+                            if (!eventData["new_state"]["attributes"]["target_temp_high"].isNull()) climate.targetTempHigh = eventData["new_state"]["attributes"]["target_temp_high"].as<float>();
+                            if (!eventData["new_state"]["attributes"]["target_temp_low"].isNull()) climate.targetTempLow = eventData["new_state"]["attributes"]["target_temp_low"].as<float>();
+                            if (!eventData["new_state"]["attributes"]["current_humidity"].isNull()) climate.currentHumidity = eventData["new_state"]["attributes"]["current_humidity"].as<float>();
                             climate.minTemp = eventData["new_state"]["attributes"]["min_temp"] | 7.0f;
                             climate.maxTemp = eventData["new_state"]["attributes"]["max_temp"] | 35.0f;
                             climate.targetTempStep = eventData["new_state"]["attributes"]["target_temp_step"] | 0.5f;

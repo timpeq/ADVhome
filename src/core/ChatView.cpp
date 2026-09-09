@@ -12,6 +12,12 @@ void ChatView::addMessage(const String& message) {
     while (_messages.size() > 8) _messages.erase(_messages.begin());
 }
 
+void ChatView::onEnter() {
+    if (_messages.empty()) {
+        addMessage("HA: Type or hold the Go key while speaking.");
+    }
+}
+
 void ChatView::receiveResponse(const String& response) {
     addMessage("HA: " + response);
 }
