@@ -55,7 +55,12 @@ The device has ~320KB of usable RAM. Home Assistant instances can have thousands
 - *DO NOT* add large attributes to the base `Entity` struct, this causes massive heap fragmentation. For domains that need large rich attributes (like `climate` or `media_player`), store their states in a separate decoupled `std::map` inside `EntityManager`.
 
 **Flash Limit:**
-- Flash memory is extremely tight (~97% full). Avoid bringing in heavy dependencies or writing overly verbose template classes. Check `pio run` output sizes frequently.
+- The `advhom` slot is 1536K. The image currently sits around 81% of it, so
+  there is real room, but it is finite: the app's own code is only ~158KB and
+  the rest is WiFi/TLS/lwIP/M5GFX/Arduino core, which is fixed cost. Avoid
+  bringing in heavy dependencies or overly verbose template classes, and check
+  `pio run` output sizes frequently. `advhome_partitions.csv` mirrors the slot
+  size so an overflow fails loudly at build time.
 
 **Audio / I2S Peculiarities:**
 - Calling `M5.Mic.end()` or interfering with the internal microphone while `M5.Speaker` is running can cause the I2S/codec bus to hang and emit a screeching noise. Ensure that `M5.Mic.begin()` is active and avoid arbitrary `end()` calls during interactions.
