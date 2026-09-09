@@ -128,35 +128,6 @@ void DisplayManager::drawHASetup(const String& ipAddress) {
     push();
 }
 
-void DisplayManager::drawDiagPage(const String& ipAddress, const String& haUrl, const String& haVersion) {
-    clear();
-    _canvas.setCursor(0, 0);
-    _canvas.setTextColor(TFT_CYAN);
-    _canvas.setTextSize(2);
-    _canvas.println("Diagnostic Info");
-    
-    _canvas.setTextColor(TFT_WHITE);
-    _canvas.setTextSize(1);
-    _canvas.println("");
-    
-    _canvas.print("IP: ");
-    _canvas.setTextColor(TFT_YELLOW);
-    _canvas.println(ipAddress);
-    
-    _canvas.setTextColor(TFT_WHITE);
-    _canvas.print("HA: ");
-    _canvas.setTextColor(TFT_YELLOW);
-    _canvas.println(haUrl);
-    
-    _canvas.setTextColor(TFT_WHITE);
-    _canvas.print("Version: ");
-    _canvas.setTextColor(TFT_GREEN);
-    _canvas.println(haVersion);
-    
-    drawBatteryIndicator();
-    push();
-}
-
 void DisplayManager::drawBatteryIndicator() {
     int batteryLevel = M5.Power.getBatteryLevel();
     _canvas.fillRect(200, 0, 40, 16, TFT_BLACK);

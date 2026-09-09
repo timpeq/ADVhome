@@ -70,47 +70,56 @@ void ConfigManager::clearHAConfig() {
     _prefs.remove("ha_token");
 }
 
-std::vector<String> ConfigManager::getFavorites() {
+// Favourites are read on every list redraw, so they are parsed from NVS once
+// and kept in RAM; writes go through to NVS immediately.
+void ConfigManager::loadFavorites() {
+    if (_favLoaded) return;
+    _favLoaded = true;
     String favStr = _prefs.getString("favorites", "");
-    std::vector<String> result;
     int start = 0;
-    int end = favStr.indexOf(',');
-    while (end != -1) {
-        result.push_back(favStr.substring(start, end));
+    while (start < (int)favStr.length()) {
+        int end = favStr.indexOf(',', start);
+        if (end == -1) end = favStr.length();
+        if (end > start) _favorites.push_back(favStr.substring(start, end));
         start = end + 1;
-        end = favStr.indexOf(',', start);
     }
-    if (start < favStr.length()) {
-        result.push_back(favStr.substring(start));
+}
+
+void ConfigManager::saveFavorites() {
+    String favStr = "";
+    for (const auto& fav : _favorites) {
+        if (favStr.length() > 0) favStr += ",";
+        favStr += fav;
     }
-    return result;
+    _prefs.putString("favorites", favStr);
+    _favRevision++;
+}
+
+const std::vector<String>& ConfigManager::getFavorites() {
+    loadFavorites();
+    return _favorites;
 }
 
 void ConfigManager::addFavorite(const String& entity_id) {
     if (isFavorite(entity_id)) return;
-    String favStr = _prefs.getString("favorites", "");
-    if (favStr.length() > 0) {
-        favStr += ",";
-    }
-    favStr += entity_id;
-    _prefs.putString("favorites", favStr);
+    _favorites.push_back(entity_id);
+    saveFavorites();
 }
 
 void ConfigManager::removeFavorite(const String& entity_id) {
-    auto favs = getFavorites();
-    String newStr = "";
-    for (const auto& fav : favs) {
-        if (fav != entity_id) {
-            if (newStr.length() > 0) newStr += ",";
-            newStr += fav;
+    loadFavorites();
+    for (size_t i = 0; i < _favorites.size(); i++) {
+        if (_favorites[i] == entity_id) {
+            _favorites.erase(_favorites.begin() + i);
+            saveFavorites();
+            return;
         }
     }
-    _prefs.putString("favorites", newStr);
 }
 
 bool ConfigManager::isFavorite(const String& entity_id) {
-    auto favs = getFavorites();
-    for (const auto& fav : favs) {
+    loadFavorites();
+    for (const auto& fav : _favorites) {
         if (fav == entity_id) return true;
     }
     return false;
@@ -245,14 +254,6 @@ int ConfigManager::getReconnectInterval() {
 
 void ConfigManager::setReconnectInterval(int ms) {
     _prefs.putInt("recon_int", ms);
-}
-
-int ConfigManager::getScrollStyle() {
-    return _prefs.getInt("scroll_sty", 0);
-}
-
-void ConfigManager::setScrollStyle(int style) {
-    _prefs.putInt("scroll_sty", style);
 }
 
 int ConfigManager::getScrollDelay() {

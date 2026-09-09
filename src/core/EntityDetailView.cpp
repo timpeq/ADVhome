@@ -1,6 +1,7 @@
 #include "EntityDetailView.h"
 #include "TextScroller.h"
 #include "Graphics.h"
+#include "Format.h"
 
 EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, std::function<void(String, float)> onSeekMedia, std::function<void(String, String, String, String)> onSecureService, std::function<void(String, float)> onSetClimateTemp, std::function<void(String, float, float)> onSetClimateRange, std::function<void(String, String)> onSetHvacMode, bool showEntityName)
     : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _onSeekMedia(onSeekMedia), _onSecureService(onSecureService), _onSetClimateTemp(onSetClimateTemp), _onSetClimateRange(onSetClimateRange), _onSetHvacMode(onSetHvacMode), _config(config), _scrollRepeater(config), _seekRepeater(config), _climateRepeater(config), _showEntityName(showEntityName) {}
@@ -12,13 +13,6 @@ void EntityDetailView::setEntityId(const String& id) {
     _climateChangedLocally = false;
     _volumeChangedLocally = false;
     _seekChangedLocally = false;
-}
-
-static String fmtTemp(float t) {
-    if (isnan(t)) return "--";
-    char b[12];
-    snprintf(b, sizeof(b), "%.1f", t);
-    return String(b);
 }
 
 void EntityDetailView::draw(DisplayManager& display) {
@@ -136,17 +130,10 @@ void EntityDetailView::draw(DisplayManager& display) {
             if (progress > 1.0f) progress = 1.0f;
             
             // Time labels
-            int posMin = (int)currentPosition / 60;
-            int posSec = (int)currentPosition % 60;
-            int durMin = (int)ms.duration / 60;
-            int durSec = (int)ms.duration % 60;
-            
             canvas->setCursor(10, infoY);
             canvas->setTextSize(1);
             canvas->setTextColor(TFT_LIGHTGREY);
-            char timeBuf[20];
-            snprintf(timeBuf, sizeof(timeBuf), "%d:%02d / %d:%02d", posMin, posSec, durMin, durSec);
-            canvas->print(timeBuf);
+            canvas->print(Format::clock((int)currentPosition) + " / " + Format::clock((int)ms.duration));
 
             Graphics::drawMusicIcon(*canvas, 215, infoY + 7, TFT_CYAN);
             
@@ -246,7 +233,7 @@ void EntityDetailView::drawClimate(M5Canvas* canvas, const Entity& entity) {
     canvas->setTextColor(TFT_WHITE);
     canvas->setTextSize(3);
     canvas->setCursor(14, 58);
-    canvas->print(fmtTemp(c.currentTemperature));
+    canvas->print(Format::oneDecimal(c.currentTemperature));
     canvas->setTextSize(1);
     canvas->print(" now");
 
@@ -258,10 +245,10 @@ void EntityDetailView::drawClimate(M5Canvas* canvas, const Entity& entity) {
     if (c.hasRange()) {
         float lo = editing ? _climateLow : c.targetTempLow;
         float hi = editing ? _climateHigh : c.targetTempHigh;
-        canvas->print(fmtTemp(lo) + "-" + fmtTemp(hi));
+        canvas->print(Format::oneDecimal(lo) + "-" + Format::oneDecimal(hi));
     } else {
         float t = editing ? _climateTarget : c.targetTemperature;
-        canvas->print(fmtTemp(t));
+        canvas->print(Format::oneDecimal(t));
     }
     canvas->setTextSize(1);
     canvas->print(" set");
@@ -269,9 +256,7 @@ void EntityDetailView::drawClimate(M5Canvas* canvas, const Entity& entity) {
     if (!isnan(c.currentHumidity)) {
         canvas->setCursor(160, 99);
         canvas->setTextColor(TFT_LIGHTGREY);
-        char h[16];
-        snprintf(h, sizeof(h), "%.0f%% RH", c.currentHumidity);
-        canvas->print(h);
+        canvas->print(Format::rounded(c.currentHumidity) + "% RH");
     }
 
     canvas->setCursor(10, 123);

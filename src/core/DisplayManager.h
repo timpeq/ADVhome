@@ -20,7 +20,6 @@ public:
     void drawMenu(const String& title, const std::vector<String>& items, int selectedIndex, int scrollOffset);
     void drawPasswordInput(const String& title, const String& subtitle, const String& currentInput);
     void drawHASetup(const String& ipAddress);
-    void drawDiagPage(const String& ipAddress, const String& haUrl, const String& haVersion);
     void drawBatteryIndicator();
     
     // Direct canvas access for custom drawing if needed

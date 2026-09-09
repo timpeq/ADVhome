@@ -1,5 +1,4 @@
 #include "EntityManager.h"
-#include <algorithm>
 
 void EntityManager::clear() {
     _entities.clear();
@@ -69,34 +68,6 @@ void EntityManager::updateClimateAttributes(const String& entity_id, const Clima
     if (_entities.find(entity_id) != _entities.end() && _entities[entity_id].domain == "climate") {
         _climateStates[entity_id] = climate;
     }
-}
-
-std::vector<Entity> EntityManager::getAllEntities() const {
-    std::vector<Entity> result;
-    for (const auto& pair : _entities) {
-        result.push_back(pair.second);
-    }
-    std::sort(result.begin(), result.end(), [](const Entity& a, const Entity& b) {
-        int cmp = strcasecmp(a.friendlyName.c_str(), b.friendlyName.c_str());
-        if (cmp == 0) return a.friendlyName < b.friendlyName;
-        return cmp < 0;
-    });
-    return result;
-}
-
-std::vector<Entity> EntityManager::getEntitiesByDomain(const String& domain) const {
-    std::vector<Entity> result;
-    for (const auto& pair : _entities) {
-        if (pair.second.domain == domain) {
-            result.push_back(pair.second);
-        }
-    }
-    std::sort(result.begin(), result.end(), [](const Entity& a, const Entity& b) {
-        int cmp = strcasecmp(a.friendlyName.c_str(), b.friendlyName.c_str());
-        if (cmp == 0) return a.friendlyName < b.friendlyName;
-        return cmp < 0;
-    });
-    return result;
 }
 
 Entity EntityManager::getEntity(const String& id) const {

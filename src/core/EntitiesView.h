@@ -2,15 +2,13 @@
 #define ENTITIES_VIEW_H
 
 #include "View.h"
-#include "EntityManager.h"
-#include "ConfigManager.h"
-#include "ScrollRepeater.h"
+#include "EntityList.h"
 #include <functional>
 
 class EntitiesView : public View {
 public:
     EntitiesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle = nullptr, std::function<void(String, int)> onEntityAdjust = nullptr);
-    
+
     void onEnter() override;
     void draw(DisplayManager& display) override;
     bool handleInput(KeyboardManager& keyboard) override;
@@ -21,21 +19,23 @@ private:
     std::function<void(String)> _onEntitySelect;
     std::function<void(String)> _onEntityToggle;
     std::function<void(String, int)> _onEntityAdjust;
-    
-    std::vector<const Entity*> _cachedEntities;
-    int _selectedIndex = 0;
-    int _scrollOffset = 0;
+
+    EntityList _list;
     bool _subTabFocus = false;
-    ScrollRepeater _scrollRepeater;
-    ScrollRepeater _valueRepeater;
-    
-    std::vector<String> _subTabs = {"Favorites", "All", "alarm_control_panel", "automation", "button", "climate", "cover", "fan", "input_boolean", "light", "lock", "media_player", "scene", "script", "sensor", "switch"};
-    int _currentSubTab = 0;
-    
-    String _searchPrefix = "";
-    uint32_t _lastSearchTime = 0;
-    
+
+    // Every domain the firmware understands, in sub-tab order. Domains with no
+    // entities are skipped by _visibleTabs so the carousel only shows what this
+    // Home Assistant actually has.
+    static const char* const kDomains[];
+    static const int kDomainCount;
+    std::vector<uint8_t> _visibleTabs;
+    int _currentTab = 0; // index into _visibleTabs
+    size_t _tabsBuiltFor = (size_t)-1;
+
+    String currentDomain() const;
+    void rebuildVisibleTabs();
     void refreshCache();
+    void stepTab(int direction);
 };
 
 #endif // ENTITIES_VIEW_H

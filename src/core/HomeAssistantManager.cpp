@@ -79,70 +79,106 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
             break;
             
         case WStype_TEXT: {
-            JsonDocument filter;
-            filter["type"] = true;
-            filter["id"] = true;
-            filter["success"] = true;
-            filter["ha_version"] = true;
-            
-            filter["result"][0]["entity_id"] = true;
-            filter["result"][0]["state"] = true;
-            filter["result"][0]["attributes"]["friendly_name"] = true;
-            filter["result"][0]["attributes"]["media_title"] = true;
-            filter["result"][0]["attributes"]["media_artist"] = true;
-            filter["result"][0]["attributes"]["media_album_name"] = true;
-            filter["result"][0]["attributes"]["media_duration"] = true;
-            filter["result"][0]["attributes"]["media_position"] = true;
-            filter["result"][0]["attributes"]["volume_level"] = true;
-            filter["result"][0]["attributes"]["is_volume_muted"] = true;
-            filter["result"][0]["attributes"]["device_class"] = true;
-            filter["result"][0]["attributes"]["current_temperature"] = true;
-            filter["result"][0]["attributes"]["temperature"] = true;
-            filter["result"][0]["attributes"]["target_temp_high"] = true;
-            filter["result"][0]["attributes"]["target_temp_low"] = true;
-            filter["result"][0]["attributes"]["current_humidity"] = true;
-            filter["result"][0]["attributes"]["min_temp"] = true;
-            filter["result"][0]["attributes"]["max_temp"] = true;
-            filter["result"][0]["attributes"]["target_temp_step"] = true;
-            filter["result"][0]["attributes"]["hvac_action"] = true;
-            filter["result"][0]["attributes"]["hvac_modes"] = true;
-            
-            filter["event"]["event_type"] = true;
-            filter["event"]["type"] = true;
-            filter["event"]["data"]["entity_id"] = true;
-            filter["event"]["data"]["runner_data"]["stt_binary_handler_id"] = true;
-            filter["event"]["data"]["stt_output"]["text"] = true;
-            filter["event"]["data"]["intent_input"] = true;
-            filter["event"]["data"]["intent_output"]["response"]["speech"]["plain"]["speech"] = true;
-            filter["event"]["data"]["intent_output"]["response"]["speech"]["ssml"]["speech"] = true;
-            filter["event"]["data"]["tts_input"] = true;
-            filter["event"]["data"]["tts_output"]["token"] = true;
-            filter["event"]["data"]["tts_output"]["url"] = true;
-            filter["event"]["data"]["tts_output"]["mime_type"] = true;
-            filter["event"]["data"]["tts_output"]["stream_response"] = true;
-            filter["event"]["data"]["message"] = true;
-            filter["event"]["data"]["new_state"]["state"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["friendly_name"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["media_title"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["media_artist"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["media_album_name"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["media_duration"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["media_position"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["volume_level"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["is_volume_muted"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["device_class"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["current_temperature"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["temperature"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["target_temp_high"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["target_temp_low"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["current_humidity"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["min_temp"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["max_temp"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["target_temp_step"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["hvac_action"] = true;
-            filter["event"]["data"]["new_state"]["attributes"]["hvac_modes"] = true;
-
-            filter["error"]["message"] = true;
+            // Built once: the same projection is applied to every frame, and
+            // constructing it key-by-key inlines a large amount of code here.
+            static JsonDocument filter;
+            if (filter.isNull()) {
+                deserializeJson(filter, F(
+                    "{"
+                        "\"type\":true,"
+                        "\"id\":true,"
+                        "\"success\":true,"
+                        "\"ha_version\":true,"
+                        "\"result\":["
+                            "{"
+                                "\"entity_id\":true,"
+                                "\"state\":true,"
+                                "\"attributes\":{"
+                                    "\"friendly_name\":true,"
+                                    "\"media_title\":true,"
+                                    "\"media_artist\":true,"
+                                    "\"media_album_name\":true,"
+                                    "\"media_duration\":true,"
+                                    "\"media_position\":true,"
+                                    "\"volume_level\":true,"
+                                    "\"is_volume_muted\":true,"
+                                    "\"device_class\":true,"
+                                    "\"current_temperature\":true,"
+                                    "\"temperature\":true,"
+                                    "\"target_temp_high\":true,"
+                                    "\"target_temp_low\":true,"
+                                    "\"current_humidity\":true,"
+                                    "\"min_temp\":true,"
+                                    "\"max_temp\":true,"
+                                    "\"target_temp_step\":true,"
+                                    "\"hvac_action\":true,"
+                                    "\"hvac_modes\":true"
+                                "}"
+                            "}"
+                        "],"
+                        "\"event\":{"
+                            "\"event_type\":true,"
+                            "\"type\":true,"
+                            "\"data\":{"
+                                "\"entity_id\":true,"
+                                "\"runner_data\":{"
+                                    "\"stt_binary_handler_id\":true"
+                                "},"
+                                "\"stt_output\":{"
+                                    "\"text\":true"
+                                "},"
+                                "\"intent_input\":true,"
+                                "\"intent_output\":{"
+                                    "\"response\":{"
+                                        "\"speech\":{"
+                                            "\"plain\":{"
+                                                "\"speech\":true"
+                                            "},"
+                                            "\"ssml\":{"
+                                                "\"speech\":true"
+                                            "}"
+                                        "}"
+                                    "}"
+                                "},"
+                                "\"tts_input\":true,"
+                                "\"tts_output\":{"
+                                    "\"token\":true,"
+                                    "\"url\":true,"
+                                    "\"mime_type\":true,"
+                                    "\"stream_response\":true"
+                                "},"
+                                "\"message\":true,"
+                                "\"new_state\":{"
+                                    "\"state\":true,"
+                                    "\"attributes\":{"
+                                        "\"friendly_name\":true,"
+                                        "\"media_title\":true,"
+                                        "\"media_artist\":true,"
+                                        "\"media_album_name\":true,"
+                                        "\"media_duration\":true,"
+                                        "\"media_position\":true,"
+                                        "\"volume_level\":true,"
+                                        "\"is_volume_muted\":true,"
+                                        "\"device_class\":true,"
+                                        "\"current_temperature\":true,"
+                                        "\"temperature\":true,"
+                                        "\"target_temp_high\":true,"
+                                        "\"target_temp_low\":true,"
+                                        "\"current_humidity\":true,"
+                                        "\"min_temp\":true,"
+                                        "\"max_temp\":true,"
+                                        "\"target_temp_step\":true,"
+                                        "\"hvac_action\":true,"
+                                        "\"hvac_modes\":true"
+                                    "}"
+                                "}"
+                            "}"
+                        "},"
+                        "\"error\":{"
+                            "\"message\":true"
+                        "}"
+                    "}"));
+            }
 
             JsonDocument doc;
             DeserializationError error = deserializeJson(doc, payload, DeserializationOption::Filter(filter));

@@ -31,10 +31,12 @@ public:
     void clearHAConfig();
 
     // Favorites Configuration
-    std::vector<String> getFavorites();
+    const std::vector<String>& getFavorites();
     void addFavorite(const String& entity_id);
     void removeFavorite(const String& entity_id);
     bool isFavorite(const String& entity_id);
+    // Bumped on every add/remove so views can rebuild their caches lazily.
+    uint32_t getFavoritesRevision() const { return _favRevision; }
     int getFavoritesSort();
     void setFavoritesSort(int sort);
     
@@ -83,9 +85,6 @@ public:
     int getReconnectInterval();
     void setReconnectInterval(int ms);
     
-    // 0 = Left/Right scrolls 1 item, 1 = Left/Right pages up/down
-    int getScrollStyle();
-    void setScrollStyle(int style);
     int getScrollDelay();
     void setScrollDelay(int ms);
     int getScrollSpeed();
@@ -99,6 +98,12 @@ public:
     
 private:
     Preferences _prefs;
+
+    void loadFavorites();
+    void saveFavorites();
+    std::vector<String> _favorites;
+    bool _favLoaded = false;
+    uint32_t _favRevision = 0;
 
     // Cached copies of settings read every loop() iteration by checkPowerManagement();
     // avoids hammering NVS (and flooding logs with NOT_FOUND) when keys are unset.

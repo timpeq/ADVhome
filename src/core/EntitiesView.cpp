@@ -1,268 +1,193 @@
 #include "EntitiesView.h"
-#include "TextScroller.h"
 #include <algorithm>
 
+const char* const EntitiesView::kDomains[] = {
+    "Favorites", "All", "alarm_control_panel", "automation", "button", "climate",
+    "cover", "fan", "input_boolean", "light", "lock", "media_player", "scene",
+    "script", "sensor", "switch"
+};
+const int EntitiesView::kDomainCount = sizeof(kDomains) / sizeof(kDomains[0]);
+
 EntitiesView::EntitiesView(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle, std::function<void(String, int)> onEntityAdjust)
-    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect), _onEntityToggle(onEntityToggle), _onEntityAdjust(onEntityAdjust), _scrollRepeater(config), _valueRepeater(config) {}
+    : _entityManager(entityManager), _config(config), _onEntitySelect(onEntitySelect),
+      _onEntityToggle(onEntityToggle), _onEntityAdjust(onEntityAdjust),
+      _list(entityManager, config) {
+    _list.setTopY(37);
+    _visibleTabs.push_back(0);
+    _visibleTabs.push_back(1);
+}
+
+String EntitiesView::currentDomain() const {
+    if (_visibleTabs.empty()) return "All";
+    return kDomains[_visibleTabs[_currentTab]];
+}
+
+void EntitiesView::rebuildVisibleTabs() {
+    const auto& entitiesMap = _entityManager.getEntitiesMap();
+    if (_tabsBuiltFor == entitiesMap.size()) return;
+    _tabsBuiltFor = entitiesMap.size();
+
+    String keepDomain = currentDomain();
+
+    // Favorites and All are always offered; the rest earn their slot.
+    _visibleTabs.clear();
+    for (int i = 0; i < kDomainCount; i++) {
+        if (i < 2) {
+            _visibleTabs.push_back(i);
+            continue;
+        }
+        for (const auto& pair : entitiesMap) {
+            if (pair.second.domain == kDomains[i]) {
+                _visibleTabs.push_back(i);
+                break;
+            }
+        }
+    }
+
+    _currentTab = 0;
+    for (size_t i = 0; i < _visibleTabs.size(); i++) {
+        if (keepDomain == kDomains[_visibleTabs[i]]) {
+            _currentTab = i;
+            break;
+        }
+    }
+}
 
 void EntitiesView::refreshCache() {
-    _cachedEntities.clear();
-    
-    String currentDomain = _subTabs[_currentSubTab];
+    String domain = currentDomain();
     const auto& entitiesMap = _entityManager.getEntitiesMap();
 
-    if (currentDomain == "Favorites") {
-        auto favoriteIds = _config.getFavorites();
-        for (const auto& id : favoriteIds) {
+    _list.items.clear();
+
+    if (domain == "Favorites") {
+        for (const auto& id : _config.getFavorites()) {
             auto entityIt = entitiesMap.find(id);
-            if (entityIt != entitiesMap.end()) _cachedEntities.push_back(&entityIt->second);
+            if (entityIt != entitiesMap.end()) _list.items.push_back(&entityIt->second);
+        }
+    } else {
+        for (const auto& pair : entitiesMap) {
+            if (domain == "All" || pair.second.domain == domain) {
+                _list.items.push_back(&pair.second);
+            }
         }
     }
-    
-    for (const auto& pair : entitiesMap) {
-        if (currentDomain != "Favorites" && (currentDomain == "All" || pair.second.domain == currentDomain)) {
-            _cachedEntities.push_back(&pair.second);
-        }
-    }
-    
-    // Sort in-place by pointer - no Entity copies needed
-    std::sort(_cachedEntities.begin(), _cachedEntities.end(), [](const Entity* a, const Entity* b) {
+
+    std::sort(_list.items.begin(), _list.items.end(), [](const Entity* a, const Entity* b) {
         int cmp = strcasecmp(a->friendlyName.c_str(), b->friendlyName.c_str());
         if (cmp == 0) return a->friendlyName < b->friendlyName;
         return cmp < 0;
     });
-    
-    if (_selectedIndex >= (int)_cachedEntities.size()) {
-        _selectedIndex = _cachedEntities.empty() ? 0 : _cachedEntities.size() - 1;
-    }
-    
-    if (_scrollOffset > _selectedIndex) {
-        _scrollOffset = 0;
-    }
+
+    _list.clampSelection();
+}
+
+void EntitiesView::stepTab(int direction) {
+    if (_visibleTabs.empty()) return;
+    _currentTab = (_currentTab + direction + (int)_visibleTabs.size()) % (int)_visibleTabs.size();
+    refreshCache();
 }
 
 void EntitiesView::onEnter() {
+    rebuildVisibleTabs();
     refreshCache();
 }
 
 void EntitiesView::draw(DisplayManager& display) {
     auto canvas = display.getCanvas();
-    
-    // Draw sub-tab bar
-    canvas->fillRect(0, 20, 240, 15, 0x2124); // Slightly darker than tab bar
+
+    size_t knownCount = _tabsBuiltFor;
+    rebuildVisibleTabs();
+    if (knownCount != _tabsBuiltFor) refreshCache();
+
+    // Sub-tab carousel, centred on the active domain.
+    canvas->fillRect(0, 20, 240, 15, 0x2124);
     canvas->setTextWrap(false);
-    
-    int unoffsetX = 0;
-    for (int i = 0; i < _currentSubTab; i++) {
-        unoffsetX += _subTabs[i].length() * 6 + 10;
+    canvas->setTextSize(1);
+
+    int currentX = 120;
+    for (int i = 0; i < _currentTab; i++) {
+        currentX -= (int)strlen(kDomains[_visibleTabs[i]]) * 6 + 10;
     }
-    
-    int currentTabWidth = _subTabs[_currentSubTab].length() * 6 + 10;
-    int offsetX = 120 - unoffsetX - (currentTabWidth / 2);
-    
-    int currentX = offsetX;
-    for (size_t i = 0; i < _subTabs.size(); i++) {
-        int tabWidth = _subTabs[i].length() * 6 + 10;
-        
+    currentX -= ((int)currentDomain().length() * 6 + 10) / 2;
+
+    for (size_t i = 0; i < _visibleTabs.size(); i++) {
+        String label = kDomains[_visibleTabs[i]];
+        int tabWidth = label.length() * 6 + 10;
+
         if (currentX + tabWidth > 0 && currentX < 240) {
-            if (i == (size_t)_currentSubTab) {
-                canvas->fillRect(currentX, 20, tabWidth, 15, TFT_DARKCYAN);
+            if (i == (size_t)_currentTab) {
+                canvas->fillRect(currentX, 20, tabWidth, 15, _subTabFocus ? TFT_BLUE : TFT_DARKCYAN);
                 canvas->setTextColor(TFT_WHITE);
             } else {
                 canvas->setTextColor(TFT_LIGHTGREY);
             }
-            canvas->setTextSize(1);
+            label.replace("_", " ");
             canvas->setCursor(currentX + 5, 24);
-            String tabText = _subTabs[i];
-            tabText.replace("_", " ");
-            canvas->print(tabText);
+            canvas->print(label);
         }
         currentX += tabWidth;
     }
     canvas->setTextWrap(true);
-    
-    // Draw the list starting below the sub-tab bar (Y=35)
-    int y = 37;
-    int itemsPerPage = (135 - 37) / 15;
-    
-    if (_cachedEntities.empty()) {
-        canvas->setCursor(5, y);
+
+    if (_list.items.empty()) {
+        canvas->setCursor(5, 45);
         canvas->setTextColor(TFT_LIGHTGREY);
-        canvas->println("No entities found.");
+        canvas->print("No entities found.");
         return;
     }
-    
-    for (int i = 0; i < itemsPerPage; i++) {
-        int idx = _scrollOffset + i;
-        if (idx >= (int)_cachedEntities.size()) break;
-        
-        const auto* entity = _cachedEntities[idx];
-        
-        if (idx == _selectedIndex) {
-            canvas->fillRect(0, y + (i * 15) - 2, 240, 15, TFT_BLUE);
-            canvas->setTextColor(TFT_WHITE);
-        } else {
-            canvas->setTextColor(TFT_LIGHTGREY);
-        }
-        
-        canvas->setCursor(5, y + (i * 15));
-        
-        bool isFav = _config.isFavorite(entity->id);
-        if (isFav) {
-            canvas->setTextColor(TFT_YELLOW);
-            canvas->print("* ");
-            if (idx == _selectedIndex) canvas->setTextColor(TFT_WHITE);
-            else canvas->setTextColor(TFT_LIGHTGREY);
-        } else {
-            canvas->print("  ");
-        }
-        
-        String dispName = TextScroller::visible(entity->friendlyName, 20, idx == _selectedIndex);
-        canvas->print(dispName);
-        
-        // Scenes store their last-activated timestamp as state; keep the list compact.
-        String displayState = entity->domain == "scene" ? "Scene" : entity->state;
-        displayState.replace("_", " ");
 
-        // State on the right
-        canvas->setCursor(165, y + (i * 15));
-        if (entity->state == "on") canvas->setTextColor(TFT_GREEN);
-        else if (entity->state == "off") canvas->setTextColor(TFT_RED);
-        else canvas->setTextColor(TFT_CYAN);
-        
-        canvas->print(TextScroller::visible(displayState, 12, false));
-    }
+    _list.draw(*canvas, true);
 }
 
 bool EntitiesView::handleInput(KeyboardManager& keyboard) {
-    bool handled = false;
-    
-    auto chars = keyboard.getNewChars();
-    for (char c : chars) {
-        if ((c == 'f' || c == 'F') && keyboard.isCtrlHeld()) {
-            if (!_cachedEntities.empty()) {
-                String id = _cachedEntities[_selectedIndex]->id;
-                if (_config.isFavorite(id)) {
-                    _config.removeFavorite(id);
-                } else {
-                    _config.addFavorite(id);
-                }
-                handled = true;
-            }
-        } else if (isAlphaNumeric(c) || c == ' ') {
-            if (millis() - _lastSearchTime > 1000) {
-                _searchPrefix = "";
-            }
-            _searchPrefix += String(c);
-            _lastSearchTime = millis();
-            
-            for (size_t i = 0; i < _cachedEntities.size(); i++) {
-                if (_cachedEntities[i]->friendlyName.substring(0, _searchPrefix.length()).equalsIgnoreCase(_searchPrefix)) {
-                    _selectedIndex = i;
-                    int itemsPerPage = (135 - 37) / 15;
-                    if (_selectedIndex < _scrollOffset) _scrollOffset = _selectedIndex;
-                    else if (_selectedIndex >= _scrollOffset + itemsPerPage) {
-                        _scrollOffset = _selectedIndex - itemsPerPage + 1;
-                    }
-                    handled = true;
-                    break;
-                }
-            }
-        }
+    if (keyboard.wasLeftPressed()) {
+        stepTab(-1);
+        _subTabFocus = true;
+        return true;
     }
-    
-    if (handled) return true;
-    
-    if (_subTabFocus) {
-        if (keyboard.wasLeftPressed()) {
-            if (_currentSubTab > 0) _currentSubTab--;
-            else _currentSubTab = _subTabs.size() - 1;
-            refreshCache();
-            handled = true;
-        } else if (keyboard.wasRightPressed()) {
-            if (_currentSubTab < (int)_subTabs.size() - 1) _currentSubTab++;
-            else _currentSubTab = 0;
-            refreshCache();
-            handled = true;
-        } else if (keyboard.wasDownPressed()) {
-            _subTabFocus = false;
-            handled = true;
-        }
-        return handled;
+    if (keyboard.wasRightPressed()) {
+        stepTab(1);
+        _subTabFocus = true;
+        return true;
     }
 
-    if (_cachedEntities.empty()) {
-        if (keyboard.wasLeftPressed()) {
-            if (_currentSubTab > 0) _currentSubTab--;
-            else _currentSubTab = _subTabs.size() - 1;
-            refreshCache();
-            _subTabFocus = true;
-            return true;
-        }
-        if (keyboard.wasRightPressed()) {
-            if (_currentSubTab < (int)_subTabs.size() - 1) _currentSubTab++;
-            else _currentSubTab = 0;
-            refreshCache();
-            _subTabFocus = true;
+    if (_subTabFocus) {
+        if (keyboard.wasDownPressed()) {
+            _subTabFocus = false;
             return true;
         }
         return false;
     }
 
-    int itemsPerPage = (135 - 37) / 15;
+    if (_list.items.empty()) return false;
 
-    auto moveSelection = [&](int direction) {
-        if (direction < 0 && _selectedIndex > 0) {
-            _selectedIndex--;
-            if (_selectedIndex < _scrollOffset) _scrollOffset--;
-        } else if (direction > 0 && _selectedIndex < (int)_cachedEntities.size() - 1) {
-            _selectedIndex++;
-            if (_selectedIndex >= _scrollOffset + itemsPerPage) _scrollOffset++;
-        }
-    };
+    EntityList::Input input = _list.handleInput(keyboard);
+    bool handled = input.changed;
 
-    if (keyboard.wasLeftPressed()) {
-        if (_currentSubTab > 0) _currentSubTab--;
-        else _currentSubTab = _subTabs.size() - 1;
-        refreshCache();
-        _subTabFocus = true;
-        handled = true;
-    } else if (keyboard.wasRightPressed()) {
-        if (_currentSubTab < (int)_subTabs.size() - 1) _currentSubTab++;
-        else _currentSubTab = 0;
-        refreshCache();
-        _subTabFocus = true;
-        handled = true;
-    } else {
-        int direction = _scrollRepeater.update(keyboard);
-        if (direction < 0 && _selectedIndex == 0) {
-            _subTabFocus = true;
-            handled = true;
-        } else if (direction != 0) {
-            moveSelection(direction);
-            handled = true;
-        } else {
-            int adjDir = _valueRepeater.updatePlusMinus(keyboard);
-            if (adjDir != 0) {
-                if (_onEntityAdjust) {
-                    _onEntityAdjust(_cachedEntities[_selectedIndex]->id, adjDir);
-                }
-                handled = true;
-            }
-        }
+    if (input.hitTop) _subTabFocus = true;
+
+    // Read the row once: toggling a favourite can rebuild the list under us.
+    const Entity* item = _list.current();
+    if (!item) return handled;
+    String id = item->id;
+
+    if (input.adjust != 0 && _onEntityAdjust) {
+        _onEntityAdjust(id, input.adjust);
     }
-    
+
     if (keyboard.wasEnterPressed()) {
-        if (_onEntitySelect) {
-            _onEntitySelect(_cachedEntities[_selectedIndex]->id);
-        }
+        if (_onEntitySelect) _onEntitySelect(id);
         handled = true;
     } else if (keyboard.wasSpacePressed()) {
-        if (_onEntityToggle && !_cachedEntities.empty()) {
-            _onEntityToggle(_cachedEntities[_selectedIndex]->id);
-        }
+        if (_onEntityToggle) _onEntityToggle(id);
         handled = true;
     }
-    
+
+    if (input.favToggle) {
+        if (_config.isFavorite(id)) _config.removeFavorite(id);
+        else _config.addFavorite(id);
+        if (currentDomain() == "Favorites") refreshCache();
+    }
+
     return handled;
 }

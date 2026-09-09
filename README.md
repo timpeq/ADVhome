@@ -106,8 +106,10 @@ Create the long-lived access token in Home Assistant from your user profile page
 - `W` / `S`, or Up / Down: move through lists
 - `Enter`, `Space`, or Cardputer button A: select or submit
 - `Backspace`, `Esc`, `` ` ``, or `~`: delete text or go back, depending on the active view
-- `A` / `D`, or Left / Right: navigate horizontally according to the configured scroll style
+- `A` / `D`, or Left / Right: change the Entities sub-tab (domain)
 - `Tab`: switch between interface sections where supported
+- Typing letters: jump to the first entity whose name starts with what you typed
+- `Ctrl-F`: add or remove the selected entity from Favorites
 
 The Chat tab sends text through Home Assistant's authenticated WebSocket
 `conversation/process` command and keeps the returned conversation ID for
@@ -135,7 +137,7 @@ encoding/decoding, and limited RAM. A text Chat fallback should remain even
 after voice support is added.
 
 The Config view exposes UI options such as battery visibility, Chat tab visibility,
-reconnect interval, back-button behavior, and scroll behavior. Chat is enabled by
+reconnect interval, back-button behavior, and scroll repeat timing. Chat is enabled by
 default and can be hidden without disabling the rest of the Home Assistant
 connection or entity controls.
 
@@ -152,6 +154,7 @@ src/core/SetupPortal.*        Browser-based Home Assistant setup
 src/core/HomeAssistantManager.*
                              Home Assistant WebSocket and API integration
 src/core/EntityManager.*      Cached Home Assistant entities
+src/core/EntityList.*         Shared scrolling entity list (rows, scrollbar, type-ahead)
 src/core/*View.*              Main, detail, configuration, favorites, and diagnostic views
 merge_firmware.py             Post-build merged ESP32-S3 image generation
 platformio.ini                PlatformIO target and dependencies

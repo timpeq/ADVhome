@@ -50,8 +50,6 @@ public:
     void updateMediaAttributes(const String& entity_id, const String& title, const String& artist, const String& album, float duration, float position, float volume, bool muted);
     void updateClimateAttributes(const String& entity_id, const ClimateState& climate);
     
-    std::vector<Entity> getAllEntities() const;
-    std::vector<Entity> getEntitiesByDomain(const String& domain) const;
     Entity getEntity(const String& id) const;
     const std::map<String, Entity>& getEntitiesMap() const { return _entities; }
     

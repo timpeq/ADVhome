@@ -58,17 +58,6 @@ void TabController::showView(View* target) {
     }
 }
 
-void TabController::prevTab() {
-    if (_tabs.empty()) return;
-    _tabs[_currentTabIndex].view->onExit();
-    size_t startIndex = _currentTabIndex;
-    do {
-        if (_currentTabIndex == 0) _currentTabIndex = _tabs.size() - 1;
-        else _currentTabIndex--;
-    } while (!_tabs[_currentTabIndex].visible && _currentTabIndex != startIndex);
-    _tabs[_currentTabIndex].view->onEnter();
-}
-
 void TabController::drawActiveView(DisplayManager& display) {
     if (_tabs.empty()) return;
     _tabs[_currentTabIndex].view->draw(display);

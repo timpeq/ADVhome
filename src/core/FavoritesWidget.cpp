@@ -1,21 +1,20 @@
 #include "FavoritesWidget.h"
 
+// The section header stays put instead of being dropped once the list scrolls,
+// so rows no longer shift by a row height the first time you press down.
+static constexpr int kListTopY = 30;
+
 FavoritesWidget::FavoritesWidget(EntityManager& entityManager, ConfigManager& config, std::function<void(String)> onEntitySelect, std::function<void(String)> onEntityToggle, std::function<void(String, int)> onEntityAdjust)
-    : _favoritesView(entityManager, config, onEntitySelect, onEntityToggle, onEntityAdjust, 40) {}
+    : _favoritesView(entityManager, config, onEntitySelect, onEntityToggle, onEntityAdjust, kListTopY) {}
 
 void FavoritesWidget::draw(DisplayManager& display) {
     auto canvas = display.getCanvas();
-    
-    if (_favoritesView.getScrollOffset() == 0) {
-        canvas->setCursor(5, 21);
-        canvas->setTextColor(TFT_CYAN);
-        canvas->setTextSize(1);
-        canvas->print("Favorites");
-        _favoritesView.setTopY(40);
-    } else {
-        _favoritesView.setTopY(25);
-    }
-    
+
+    canvas->setCursor(5, 19);
+    canvas->setTextColor(TFT_CYAN);
+    canvas->setTextSize(1);
+    canvas->print("Favorites");
+
     _favoritesView.draw(display);
 }
 
