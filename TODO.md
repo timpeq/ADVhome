@@ -42,6 +42,25 @@
 - [x] Add experimental push-to-talk microphone capture for Assist conversations using the Cardputer GO button.
 - [x] Verify and implement Assist pipeline audio session/framing over the authenticated WebSocket (high effort, about 2-4 weeks).
 - [x] Decode Assist audio responses and play them through the Cardputer speaker, with text fallback (high effort, about 1-2 weeks after transport).
+- [ ] Let GO barge in on a spoken reply: stop playback and start a new request
+      without waiting for the answer to finish. Two halves, and only the first
+      is small. Stopping is a few lines — `stopVoicePlayback()` already stops
+      the channel, releases the codec and frees the buffers, so a GO press
+      during playback can silence it at once. Starting a new turn is the hard
+      half: TTS tears the WebSocket down to free the TLS buffers and only
+      reconnects from `stopVoicePlayback()`, so `startVoicePipeline()` will fail
+      for as long as the reconnect takes. Needs a pending-record state in
+      `ChatView` that arms on the GO press and starts the microphone once the
+      connection is authenticated again, plus a status line saying why the
+      device is not listening yet.
+- [ ] "Speaking" outlives the sound by a second or two. The label clears only
+      when the HTTP stream is considered finished, which needs the socket closed
+      plus a 700 ms grace, AND the speaker idle. Audio can run out well before
+      the server drops the connection, so the label is reporting the stream, not
+      the sound. Clearing it when the channel goes idle and no bytes have
+      arrived for a short while would track what the user actually hears; keep
+      the existing condition for the teardown itself, which does need the stream
+      to be done.
 
 ## Phase 4: Polish & Stability
 - [x] Move the remaining entity categories into the Entities top-level tab as sub-tabs.
