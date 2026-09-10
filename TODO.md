@@ -53,12 +53,12 @@
 
 ## Phase 5: Connection Management
 
-The basics are in: the Menu tab has Wi-Fi and Home Assistant pages that show the
-current connection and can clear it, and the connecting/reconnecting screens
+The basics are in: Menu > Settings has Wi-Fi and Home Assistant pages that show
+the current connection and can clear it, and the connecting/reconnecting screens
 accept `ESC` (Wi-Fi) and `H` (Home Assistant) so a device with a bad saved
 network is never stranded. Everything below is deferred.
 
-- [x] Show current SSID, IP, and RSSI on a Wi-Fi page reachable from the Menu.
+- [x] Show current SSID, IP, and RSSI on a Wi-Fi page, in Menu > Settings.
 - [x] Show the Home Assistant URL and version on a Home Assistant page.
 - [x] Confirm-before-clearing on both, with an auto-disarming confirmation.
 - [x] Offer credential recovery keys from the connecting and reconnecting screens.
@@ -122,11 +122,12 @@ forum post goes up. Ordered roughly by what blocks what.
 - [x] Add an on-device Help & Shortcuts page, compiled from the input handlers.
 - [x] Tell a new device's empty Favorites screen how to add favorites.
 - [x] Make the list SPACE toggle and +/- adjustment optional settings.
-- [ ] Decide whether `W`/`S` and `A`/`D` should navigate entity lists. They do
-      not today: they feed the type-ahead search like any other letter, and only
-      the Wi-Fi picker treats `W`/`S` as up and down. The README claimed
-      otherwise until now. Either wire them up and lose those letters from
-      type-ahead, or leave it and keep the docs honest.
+- [x] Decide whether `W`/`S` and `A`/`D` should navigate entity lists. Decided
+      against: they stay type-ahead letters, because a list you search by name
+      is worth more than a second set of arrows. `W`/`S` (and `J`/`K`) still
+      scroll the first-setup Wi-Fi picker, which has no type-ahead to lose, and
+      `S` still stops playback in the media player. The Help page no longer
+      carries a note denying any of this.
 - [ ] Surface `P` (play/pause) and `S` (stop) in the media player's on-screen
       hint, or drop them. They work but only the Help page mentions them.
 - [ ] Check the detail window's layout for every supported domain at both short

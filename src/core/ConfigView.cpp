@@ -4,6 +4,8 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, Ho
     : _config(config), _diagnosticView(diagnosticView), _haManager(haManager), _onSettingsChanged(onSettingsChanged), _scrollRepeater(config), _valueRepeater(config) {
     _settings.push_back({"Brightness", 10});
     _settings.push_back({"TTS Volume", 19});
+    _settings.push_back({"Wi-Fi", 27});
+    _settings.push_back({"Home Assistant", 28});
     _settings.push_back({"Dim T/O", 11});
     _settings.push_back({"Disp Off T/O", 12});
     _settings.push_back({"Soft Sleep T/O", 13});
@@ -58,7 +60,26 @@ void ConfigView::refreshValues() {
     _listAdjust = _config.getListAdjustEnabled();
 }
 
+void ConfigView::setConnectionViews(View* wifiView, View* haView) {
+    _wifiView = wifiView;
+    _haView = haView;
+}
+
+View* ConfigView::pageForSetting(int type) const {
+    switch (type) {
+        case 4:  return &_diagnosticView;
+        case 27: return _wifiView;
+        case 28: return _haView;
+        default: return nullptr;
+    }
+}
+
 void ConfigView::onEnter() {
+    // Re-entering the tab always lands on the list rather than resuming a page.
+    if (_activeSubView) {
+        _activeSubView->onExit();
+        _activeSubView = nullptr;
+    }
     refreshValues();
     // Reset both: leaving the selection at 0 while the list stays scrolled draws
     // a page with no visible highlight, and Up cannot recover from it.
@@ -67,6 +88,11 @@ void ConfigView::onEnter() {
 }
 
 void ConfigView::onExit() {
+    if (_activeSubView) {
+        _activeSubView->onExit();
+        _activeSubView = nullptr;
+    }
+
     // The TTS Volume preview calls M5.Speaker.begin() to play its test tone,
     // which powers up the ES8311 DAC and leaves it powered. Release it on the
     // way out, unless something is actually playing through it.
@@ -78,8 +104,8 @@ void ConfigView::onExit() {
 void ConfigView::draw(DisplayManager& display) {
     auto canvas = display.getCanvas();
 
-    if (_showDiagnostics) {
-        _diagnosticView.draw(display);
+    if (_activeSubView) {
+        _activeSubView->draw(display);
         return;
     }
     
@@ -179,6 +205,11 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 22) {
             canvas->print(_tempStep == 1 ? "0.5 deg" : _tempStep == 2 ? "1 deg" : "AUTO");
             canvas->setTextColor(_tempStep == 0 ? TFT_LIGHTGREY : TFT_CYAN);
+        } else if (_settings[i].type == 4 || _settings[i].type == 27 ||
+                   _settings[i].type == 28) {
+            // Rows that open a page carry no value, so mark them the way the
+            // Menu marks its own entries rather than leaving the column blank.
+            canvas->print(">");
         }
     }
 }
@@ -329,13 +360,17 @@ void ConfigView::toggleCurrent(int direction) {
 bool ConfigView::handleInput(KeyboardManager& keyboard) {
     bool handled = false;
 
-    if (_showDiagnostics) {
+    if (_activeSubView) {
+        // The page gets first refusal, so its own back-handling still works:
+        // the connection pages use ESC to cancel an armed confirmation.
+        if (_activeSubView->handleInput(keyboard)) return true;
         if (keyboard.wasBackspacePressed()) {
-            _showDiagnostics = false;
+            _activeSubView->onExit();
+            _activeSubView = nullptr;
             refreshValues();
-            handled = true;
+            return true;
         }
-        return handled;
+        return false;
     }
     
     int direction = _scrollRepeater.update(keyboard);
@@ -363,8 +398,10 @@ bool ConfigView::handleInput(KeyboardManager& keyboard) {
     if (keyboard.wasEnterPressed()) dir = 1;
     
     if (dir != 0) {
-        if (_settings[_selectedIndex].type == 4) {
-            _showDiagnostics = true;
+        View* page = pageForSetting(_settings[_selectedIndex].type);
+        if (page) {
+            _activeSubView = page;
+            _activeSubView->onEnter();
         } else {
             toggleCurrent(dir);
         }

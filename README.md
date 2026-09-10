@@ -255,21 +255,26 @@ A text Chat fallback remains available and can be used without voice.
 ## Menu
 
 The rightmost tab is the Menu, drawn as a hamburger icon. It shows the app name
-and the build's git revision, and opens four pages:
+and the build's git revision, and opens three pages:
 
+- **Settings** — the former Config list: brightness and TTS volume, the Wi-Fi and
+  Home Assistant pages, battery visibility, Chat tab visibility, reconnect
+  interval, scroll and seek repeat timing, the optional list shortcuts, the voice
+  pipeline, power timeouts and sleep depth, and the Diagnostics page. Chat is
+  enabled by default and can be hidden without disabling the rest of the Home
+  Assistant connection or entity controls.
 - **Help & Shortcuts** — every keyboard shortcut in the firmware.
-- **Settings** — the former Config list: battery visibility, Chat tab visibility,
-  reconnect interval, scroll and seek repeat timing, the optional list shortcuts,
-  TTS volume and pipeline, power timeouts and sleep depth, and the Diagnostics
-  page. Chat is enabled by default
-  and can be hidden without disabling the rest of the Home Assistant connection
-  or entity controls.
+- **About & License** — version, copyright, license, and the attribution for
+  every library compiled into the firmware.
+
+Most rows change a value in place with Left/Right or `+`/`-`. Rows marked `>`
+open a full-screen page instead, on Enter, and Backspace returns to the list:
+
 - **Wi-Fi** — the current SSID, IP address, and signal strength, with an action
   that forgets the saved network.
 - **Home Assistant** — the configured URL and the server's version, with an
   action that clears the saved URL and token.
-- **About & License** — version, copyright, license, and the attribution for
-  every library compiled into the firmware.
+- **Diagnostics** — heap, RSSI, device IP, and the Home Assistant version.
 
 Both destructive actions require pressing Enter twice; the confirmation disarms
 itself after a few seconds. Because credentials are read only at startup, either

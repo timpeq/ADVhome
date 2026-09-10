@@ -361,11 +361,14 @@ void AppController::updateHAConnected() {
                 rebootWithMessage("Clearing HA setup...");
             });
 
+        // The connection pages are settings, not a separate destination, so
+        // they sit in the Settings list next to brightness and volume rather
+        // than as their own Menu entries.
+        _configView->setConnectionViews(_wifiView, _haView);
+
         _menuView = new MenuView(_config, ADVHOME_VERSION);
         _menuView->addItem("Settings", _configView);
         _menuView->addItem("Help & Shortcuts", _helpView);
-        _menuView->addItem("Wi-Fi", _wifiView);
-        _menuView->addItem("Home Assistant", _haView);
         _menuView->addItem("About & License", _aboutView);
 
         _tabController.addView(_homeView, "Home");

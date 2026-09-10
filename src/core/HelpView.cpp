@@ -59,6 +59,8 @@ const TextPageLine LINES[] = {
     {" Left / Right Change a value", 1},
     {" + and -      Change a value", 1},
     {" Hold either  Repeat", 1},
+    {" ENTER        Open a > row", 1},
+    {" BACKSPACE    Back to Settings", 1},
     {"", 1},
     {"Connecting screens", 0},
     {" ESC twice    Forget the network", 1},
@@ -87,12 +89,6 @@ const TextPageLine LINES[] = {
     {" Hold ESC sleeps at once, if", 2},
     {" ESC for Sleep is on. A progress", 2},
     {" bar shows when to let go.", 2},
-    {"", 1},
-    {"Note", 0},
-    {" W and S do not scroll lists.", 2},
-    {" They type-ahead like any other", 2},
-    {" letter. Use the arrow keys, or", 2},
-    {" the ; and . keys.", 2},
 };
 
 constexpr int LINE_COUNT = sizeof(LINES) / sizeof(LINES[0]);
