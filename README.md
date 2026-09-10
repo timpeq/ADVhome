@@ -17,13 +17,58 @@ ADVhome is an M5Stack Cardputer firmware for monitoring and controlling Home Ass
 
 ## Hardware
 
-- M5Stack Cardputer
-- M5Stack StampS3
+- An M5Stack Cardputer, either the ADV or the original
 - USB-C cable for building and flashing
 - A 2.4 GHz Wi-Fi network reachable by the Cardputer
 - A Home Assistant instance on the same network or otherwise reachable by the device
 
-The PlatformIO target is `m5stack-stamps3` and uses the Arduino framework with an 8 MB flash partition layout.
+The PlatformIO target is `m5stack-stamps3`, the StampS3 module inside the
+Cardputer, and uses the Arduino framework with an 8 MB flash partition layout.
+
+### Cardputer ADV and original Cardputer
+
+The name is a name, not a hardware requirement. ADVhome was written on and is
+tested on a **Cardputer ADV**, but almost nothing in it is specific to that
+board, and one binary is meant to run on both.
+
+There is no separate build. `M5Unified` and `M5Cardputer` detect the board at
+run time, so the same `firmware.bin` picks the right display, keyboard reader,
+speaker, microphone and battery ADC on either machine. The two keyboards differ
+completely in hardware — the ADV uses a TCA8418 controller, the original a
+scanned matrix — but both feed the same key map, so every shortcut and Fn
+combination described below is identical on the two.
+
+Only the sleep code asks which board it is on, in `AppController.cpp`, and only
+to arm the right wake source.
+
+**One feature is genuinely missing on the original: motion as activity.** The
+ADV has an IMU; the original Cardputer has none. On the ADV, picking the device
+up counts as activity and so holds off, or reverses, the `Dim`, `Display Off`
+and `Soft Sleep` steps of the power ladder. On the original there is nothing to
+poll — the code checks `M5.Imu.isEnabled()` first, so it degrades to keypresses
+only rather than misbehaving — and the ladder advances purely on its timers.
+Note that this is not wake-on-pick-up even on the ADV: no interrupt line is
+configured, so once the device is really asleep the CPU is not running to notice
+movement, and only a key or GO brings it back.
+
+What that means in practice, honestly stated: on the original Cardputer this is
+**untested rather than unsupported**. Nobody working on it has one. The parts
+that are pure software — Wi-Fi, the Home Assistant connection, entities,
+favorites, chat, the setup portal, the whole UI — carry no board-specific code
+at all and should behave the same. Three things are worth checking if you are
+the first to run it on an original, and reporting back:
+
+- **Keyboard wake from `DEEP` sleep.** The ADV wakes on one interrupt line. The
+  original has to latch its matrix rows low through deep sleep so a keypress can
+  still pull a column down; that path was written from the ESP32-S3 reference
+  and never run. `Wake On GO Only` avoids it entirely.
+- **Speaker volume.** The default was tuned against the ADV's ES8311 codec,
+  which squares its gain. The original drives its amplifier directly and may be
+  louder or quieter at the same setting.
+- **Microphone gain** for voice input, for the same reason.
+
+Bug reports from an original Cardputer are welcome and are the only way these
+stop being caveats.
 
 ## Development setup
 
@@ -214,8 +259,9 @@ and the build's git revision, and opens four pages:
 
 - **Help & Shortcuts** — every keyboard shortcut in the firmware.
 - **Settings** — the former Config list: battery visibility, Chat tab visibility,
-  reconnect interval, back-button behavior, scroll repeat timing, TTS volume and
-  pipeline, power timeouts, and the Diagnostics page. Chat is enabled by default
+  reconnect interval, scroll and seek repeat timing, the optional list shortcuts,
+  TTS volume and pipeline, power timeouts and sleep depth, and the Diagnostics
+  page. Chat is enabled by default
   and can be hidden without disabling the rest of the Home Assistant connection
   or entity controls.
 - **Wi-Fi** — the current SSID, IP address, and signal strength, with an action
@@ -239,7 +285,7 @@ when the device stays idle:
 | :--- | :--- |
 | `Dim T/O` | The backlight dims. |
 | `Disp Off T/O` | The panel is put to sleep and the Wi-Fi radio drops to `WIFI_PS_MAX_MODEM`. The connection stays up; state pushes just arrive less promptly. |
-| `Soft Sleep T/O` | Wi-Fi is switched off, the audio codec released and the CPU dropped to 80 MHz. The firmware is still running, so a keypress or moving the device resumes it immediately. |
+| `Soft Sleep T/O` | Wi-Fi is switched off, the audio codec released and the CPU dropped to 80 MHz. The firmware is still running, so a keypress resumes it immediately — as does moving the device, on a Cardputer ADV, which has an IMU. |
 | `Deep Sleep T/O` | The device actually sleeps, in the manner chosen by `Deep Sleep`. |
 
 `Deep Sleep` selects the depth of that last step:
@@ -261,7 +307,10 @@ key produces no other feedback and the device cannot sleep until every key is
 up.
 
 Both depths have been exercised on a Cardputer ADV, including `DEEP`, which uses
-`ext1` rather than light sleep's GPIO wake and reboots on wake.
+`ext1` rather than light sleep's GPIO wake and reboots on wake. On the original
+Cardputer, waking from `DEEP` with the keyboard uses a different mechanism that
+has never been run on hardware; see the compatibility notes above. `Wake On GO
+Only` sidesteps it.
 
 None of these levels have been measured with a meter; they are reasoned from the
 ESP32-S3 datasheet and the M5Unified driver source. See the roadmap.

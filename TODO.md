@@ -12,7 +12,7 @@
 - [ ] Add cursor-based navigation from list boundaries into the top-level tabs.
 - [x] Replace the flat Config tab with a Menu tab holding Settings, Wi-Fi, Home Assistant, and About.
 - [x] Add an on-device About & License page so attribution survives a firmware-only install.
-- [ ] Enhance the climate/thermostat widget in the Entity Detail View to cleanly display both the current ambient temperature and the target set temperature.
+- [x] Enhance the climate/thermostat widget in the Entity Detail View to cleanly display both the current ambient temperature and the target set temperature.
 
 ## Phase 2: Home Dashboard Completion
 - [x] Replace the first `Favs` top-level tab with `Home`.
@@ -29,13 +29,19 @@
 - [x] Make the Chat tab optional for users who do not want to use Home Assistant agents.
 
 ## Phase 3: Hardware Integration
-- [ ] Make the device sleep and wake on a button press or gyro movement.
+- [x] Make the device sleep and wake on a button press. Held `ESC` sleeps on
+      demand and the idle ladder sleeps automatically; the depth and wake
+      source are settings. See Phase 7. Waking on gyro movement is a
+      separate problem and is not reachable from firmware alone; see Known
+      limitations.
 - [ ] Make ESC an escalating back button (close modals -> top of view -> home page -> top of home -> sleep).
-- [ ] Add short hardware notes covering speaker, microphone, gyro, sleep, and wake capabilities.
-- [ ] Investigate Cardputer speaker and microphone APIs.
+- [x] Add short hardware notes covering speaker, microphone, gyro, sleep, and
+      wake capabilities. The README now carries the power ladder, the TTS and
+      codec notes, and an ADV-versus-original compatibility section.
+- [x] Investigate Cardputer speaker and microphone APIs.
 - [x] Add experimental push-to-talk microphone capture for Assist conversations using the Cardputer GO button.
-- [ ] Verify and implement Assist pipeline audio session/framing over the authenticated WebSocket (high effort, about 2-4 weeks).
-- [ ] Decode Assist audio responses and play them through the Cardputer speaker, with text fallback (high effort, about 1-2 weeks after transport).
+- [x] Verify and implement Assist pipeline audio session/framing over the authenticated WebSocket (high effort, about 2-4 weeks).
+- [x] Decode Assist audio responses and play them through the Cardputer speaker, with text fallback (high effort, about 1-2 weeks after transport).
 
 ## Phase 4: Polish & Stability
 - [x] Move the remaining entity categories into the Entities top-level tab as sub-tabs.
@@ -44,7 +50,6 @@
 - [ ] Add a small widget layout test or rendering fixture for overflow and screen bounds.
 - [x] Add a reset or reconfiguration action for Wi-Fi and Home Assistant credentials.
 - [ ] Add optional authenticated Home Assistant album-art thumbnails using a bounded JPEG cache.
-- [ ] Keep generated PlatformIO build output out of future feature commits unless a release artifact is intentionally required.
 
 ## Phase 5: Connection Management
 
@@ -75,46 +80,6 @@ network is never stranded. Everything below is deferred.
       pick between them.
 - [ ] Add a "Test connection" action that validates a URL and token before
       saving, so a typo does not require a reboot to discover.
-
-## Phase 7: Power
-
-Done: the panel is put into sleep-in rather than only blanked, the ES8311 codec
-is released whenever the screen goes off, the radio drops to `WIFI_PS_MAX_MODEM`
-while the display is off, and sleep depth and wake source are now
-separate settings: "Deep Sleep" (OFF / LIGHT / DEEP) and "Wake On GO Only".
-
-- [x] Give the held-ESC gesture visible feedback; it was silent until the key
-      came up, so there was no way to know when to let go.
-- [x] Drain the TCA8418 event FIFO before arming a wake. The queued release
-      event held INT low and woke the device the instant it slept.
-- [x] Count held keys as activity, so holding an arrow to scroll a long list no
-      longer lets the screen dim mid-gesture.
-- [x] Test DEEP. Confirmed working on a Cardputer ADV, 2026-09-09.
-- [ ] **Measure it.** None of the above has been verified with a meter, only
-      reasoned from the datasheets and the driver source. Get a USB power meter
-      or an inline shunt and record actual draw at each level: NORMAL, DIM,
-      DISPLAY_OFF, SOFT_SLEEP, light sleep, deep sleep. Without numbers there is
-      no way to know which of these changes actually mattered.
-- [ ] Consider whether `WIFI_PS_MAX_MODEM` delays Home Assistant state pushes
-      enough to be noticeable when the screen comes back on, and whether the
-      websocket survives long idle periods under it.
-- [ ] The IMU is polled for wake-on-movement, but it cannot wake the device from
-      light or deep sleep: no interrupt line is configured, so the CPU is not
-      running to poll it. Either wire up the BMI270 interrupt as a wake source
-      or document that movement only wakes it from DIM and DISPLAY_OFF.
-- [ ] The IMU runs continuously even when the screen is off. Check whether it
-      can be put into low-power mode between polls.
-- [ ] DEEP/ANY on the original (non-ADV) Cardputer latches the keyboard matrix
-      rows low with `gpio_hold_en()` so a press can still pull a column down
-      through deep sleep. That path is untested: it was written from the S3
-      reference, not run on the hardware, which nobody here has.
-- [ ] Deep sleep loses the Home Assistant connection and re-fetches all entity
-      state on wake. Measure how long that takes; if it is slow, the GO-only
-      mode may be worse overall than staying in light sleep.
-- [ ] Consider a timed wake so the device can refresh state periodically without
-      user input (`M5.Power.timerSleep`), if that is ever wanted.
-- [ ] Check whether the TCA8418 keyboard controller can be put into its own
-      low-power mode while the device sleeps.
 
 ## Phase 6: First Public Release
 
@@ -166,3 +131,65 @@ forum post goes up. Ordered roughly by what blocks what.
       hint, or drop them. They work but only the Help page mentions them.
 - [ ] Check the detail window's layout for every supported domain at both short
       and long state strings, including `unavailable`.
+
+## Phase 7: Power
+
+Done: the panel is put into sleep-in rather than only blanked, the ES8311 codec
+is released whenever the screen goes off, the radio drops to `WIFI_PS_MAX_MODEM`
+while the display is off, and sleep depth and wake source are now
+separate settings: "Deep Sleep" (OFF / LIGHT / DEEP) and "Wake On GO Only".
+
+- [x] Give the held-ESC gesture visible feedback; it was silent until the key
+      came up, so there was no way to know when to let go.
+- [x] Drain the TCA8418 event FIFO before arming a wake. The queued release
+      event held INT low and woke the device the instant it slept.
+- [x] Count held keys as activity, so holding an arrow to scroll a long list no
+      longer lets the screen dim mid-gesture.
+- [x] Test DEEP. Confirmed working on a Cardputer ADV, 2026-09-09.
+- [ ] **Measure it.** None of the above has been verified with a meter, only
+      reasoned from the datasheets and the driver source. Get a USB power meter
+      or an inline shunt and record actual draw at each level: NORMAL, DIM,
+      DISPLAY_OFF, SOFT_SLEEP, light sleep, deep sleep. Without numbers there is
+      no way to know which of these changes actually mattered.
+- [ ] Consider whether `WIFI_PS_MAX_MODEM` delays Home Assistant state pushes
+      enough to be noticeable when the screen comes back on, and whether the
+      websocket survives long idle periods under it.
+- [x] Document that IMU movement counts as activity only while the firmware is
+      still running, so it holds off DIM, DISPLAY_OFF and SOFT_SLEEP but cannot
+      wake the device once it is actually asleep. Stated in the README's power
+      section. The interrupt alternative is in Known limitations.
+- [ ] The IMU runs continuously even when the screen is off. Check whether it
+      can be put into low-power mode between polls.
+- [ ] Deep sleep loses the Home Assistant connection and re-fetches all entity
+      state on wake. Measure how long that takes; if it is slow, the GO-only
+      mode may be worse overall than staying in light sleep.
+- [ ] Consider a timed wake so the device can refresh state periodically without
+      user input (`M5.Power.timerSleep`), if that is ever wanted.
+- [ ] Check whether the TCA8418 keyboard controller can be put into its own
+      low-power mode while the device sleeps.
+
+## Known limitations
+
+Not tasks. These are things the project has decided it cannot close from here,
+recorded so they stop being rediscovered. They carry no checkbox because nobody
+working on the firmware can tick them.
+
+**Wake on movement is not reachable from firmware.** The ADV's BMI270 is polled
+as an activity source, which is why picking the device up holds off the idle
+ladder. Making it a genuine wake source is blocked twice over. M5Unified's
+BMI270 driver has no interrupt support at all — it never writes an `INT_MAP` or
+feature register, and `IMU_Base::setINTPinActiveLogic` is a stub returning
+`false` that only the MPU6886 overrides — so any-motion detection would have to
+be written against the part's feature engine directly. Separately, nothing in
+M5Unified names an IMU interrupt GPIO for the ADV, so whether `INT1` is routed to
+the ESP32-S3 at all is unverified and needs M5Stack's schematic; if it is not,
+this is board rework rather than code. Even with a routed pin, deep sleep wakes
+through `ext1`, which requires GPIO0-21, so a pin above that would give movement
+wake from light sleep only.
+
+**Deep sleep on the original Cardputer is untested.** `DEEP` with keyboard wake
+latches the matrix rows low with `gpio_hold_en()` so a press can still pull a
+column down while the digital core is off. That path was written from the
+ESP32-S3 reference and has never been run, because nobody working on the project
+owns an original Cardputer. `Wake On GO Only` avoids the path entirely. This
+closes the first time someone with the hardware reports back.
