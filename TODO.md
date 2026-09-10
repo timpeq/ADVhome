@@ -21,7 +21,8 @@
 - [x] Define a widget interface with drawing and input handling.
 - [ ] Extract domain-specific detail rendering into reusable widgets (start with media player).
 - [ ] Add a Home widget registry so widgets can be enabled and ordered dynamically.
-- [ ] Decide whether Favorites should remain duplicated in Entities or be removed once Home is stable.
+- [ ] Decide whether Favorites should remain duplicated in Entities or be removed once Home is stable. Note that Entities > Favorites is now the only place the order can be edited, so removing it needs somewhere else to put reordering.
+- [x] Let the user set the Favorites order that the `ORDER` sort displays.
 - [ ] Add a Home visual treatment using a small bitmap or an appropriate Home Assistant mark.
 - [ ] Keep the battery indicator and connection state available to Home widgets.
 - [x] Add a Chat top-level tab using Home Assistant's text conversation WebSocket API.

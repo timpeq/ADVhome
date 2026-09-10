@@ -20,7 +20,11 @@ bool KeyboardManager::wasSpacePressed() const {
 }
 
 bool KeyboardManager::wasBackspacePressed() const {
-    return (_currentStatus.del && !_lastStatus.del) || 
+    // The driver reports two distinct keys: KEY_BACKSPACE sets .backspace, and
+    // Fn maps the same physical key to KEY_DELETE, which sets .del. Checking
+    // only .del is why backspace needed Fn to do anything.
+    return (_currentStatus.backspace && !_lastStatus.backspace) ||
+           (_currentStatus.del && !_lastStatus.del) || 
            (_currentStatus.esc && !_lastStatus.esc) ||
            (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '`') != _currentStatus.word.end() &&
             std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '`') == _lastStatus.word.end()) ||
@@ -31,10 +35,10 @@ bool KeyboardManager::wasBackspacePressed() const {
 std::vector<char> KeyboardManager::getNewChars() const {
     std::vector<char> new_chars;
     for (char c : _currentStatus.word) {
-        // The backspace key reports itself as a word character as well as
-        // setting del, so a text field that appends every new char would insert
-        // a backtick and then delete it again, and backspace would appear dead.
-        // Nothing else in the app consumes these, so drop them at the source.
+        // ` and ~ are printable keys, but the app treats them as back/escape
+        // everywhere, so a text field that appended every new char would insert
+        // one and then have wasBackspacePressed() delete it in the same frame.
+        // Drop them here so the back behaviour is the only behaviour.
         if (c == '`' || c == '~') continue;
         bool was_pressed = false;
         for (char lc : _lastStatus.word) {
@@ -50,6 +54,24 @@ std::vector<char> KeyboardManager::getNewChars() const {
     return new_chars;
 }
 
+bool KeyboardManager::charHeldNow(char plain, char shifted) const {
+    return std::find(_currentStatus.word.begin(), _currentStatus.word.end(), plain) != _currentStatus.word.end() ||
+           std::find(_currentStatus.word.begin(), _currentStatus.word.end(), shifted) != _currentStatus.word.end();
+}
+
+bool KeyboardManager::charWasHeld(char plain, char shifted) const {
+    return std::find(_lastStatus.word.begin(), _lastStatus.word.end(), plain) != _lastStatus.word.end() ||
+           std::find(_lastStatus.word.begin(), _lastStatus.word.end(), shifted) != _lastStatus.word.end();
+}
+
+bool KeyboardManager::charPressed(char plain, char shifted) const {
+    return charHeldNow(plain, shifted) && !charWasHeld(plain, shifted);
+}
+
+bool KeyboardManager::charReleased(char plain, char shifted) const {
+    return !charHeldNow(plain, shifted) && charWasHeld(plain, shifted);
+}
+
 bool KeyboardManager::wasEscPressed() const {
     return _currentStatus.esc && !_lastStatus.esc;
 }
@@ -59,49 +81,35 @@ bool KeyboardManager::wasTabPressed() const {
 }
 
 bool KeyboardManager::wasUpPressed() const {
-    return (_currentStatus.up && !_lastStatus.up) || 
-           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), ';') != _currentStatus.word.end() &&
-            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), ';') == _lastStatus.word.end());
+    return (_currentStatus.up && !_lastStatus.up) || charPressed(';', ':');
 }
 
 bool KeyboardManager::wasDownPressed() const {
-    return (_currentStatus.down && !_lastStatus.down) || 
-           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '.') != _currentStatus.word.end() &&
-            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '.') == _lastStatus.word.end());
+    return (_currentStatus.down && !_lastStatus.down) || charPressed('.', '>');
 }
 
 bool KeyboardManager::wasLeftPressed() const {
-    return (_currentStatus.left && !_lastStatus.left) || 
-           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), ',') != _currentStatus.word.end() &&
-            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), ',') == _lastStatus.word.end());
+    return (_currentStatus.left && !_lastStatus.left) || charPressed(',', '<');
 }
 
 bool KeyboardManager::wasLeftReleased() const {
-    return (!_currentStatus.left && _lastStatus.left) || 
-           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), ',') == _currentStatus.word.end() &&
-            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), ',') != _lastStatus.word.end());
+    return (!_currentStatus.left && _lastStatus.left) || charReleased(',', '<');
 }
 
 bool KeyboardManager::wasRightPressed() const {
-    return (_currentStatus.right && !_lastStatus.right) || 
-           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '/') != _currentStatus.word.end() &&
-            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '/') == _lastStatus.word.end());
+    return (_currentStatus.right && !_lastStatus.right) || charPressed('/', '?');
 }
 
 bool KeyboardManager::wasRightReleased() const {
-    return (!_currentStatus.right && _lastStatus.right) || 
-           (std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '/') == _currentStatus.word.end() &&
-            std::find(_lastStatus.word.begin(), _lastStatus.word.end(), '/') != _lastStatus.word.end());
+    return (!_currentStatus.right && _lastStatus.right) || charReleased('/', '?');
 }
 
 bool KeyboardManager::isUpHeld() const {
-    return _currentStatus.up ||
-           std::find(_currentStatus.word.begin(), _currentStatus.word.end(), ';') != _currentStatus.word.end();
+    return _currentStatus.up || charHeldNow(';', ':');
 }
 
 bool KeyboardManager::isDownHeld() const {
-    return _currentStatus.down ||
-           std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '.') != _currentStatus.word.end();
+    return _currentStatus.down || charHeldNow('.', '>');
 }
 
 bool KeyboardManager::isEnterHeld() const {
@@ -121,13 +129,11 @@ bool KeyboardManager::isCharHeld(char character) const {
 }
 
 bool KeyboardManager::isLeftHeld() const {
-    return _currentStatus.left ||
-           std::find(_currentStatus.word.begin(), _currentStatus.word.end(), ',') != _currentStatus.word.end();
+    return _currentStatus.left || charHeldNow(',', '<');
 }
 
 bool KeyboardManager::isRightHeld() const {
-    return _currentStatus.right ||
-           std::find(_currentStatus.word.begin(), _currentStatus.word.end(), '/') != _currentStatus.word.end();
+    return _currentStatus.right || charHeldNow('/', '?');
 }
 
 bool KeyboardManager::wasPlusPressed() const {

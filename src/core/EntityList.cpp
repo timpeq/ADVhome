@@ -112,7 +112,8 @@ void EntityList::draw(M5Canvas& canvas, bool showStar) {
         int rowY = _topY + (i * kRowHeight);
         bool isSelected = idx == _selectedIndex;
 
-        if (isSelected) canvas.fillRect(0, rowY - 2, 240, kRowHeight, TFT_BLUE);
+        if (isSelected) canvas.fillRect(0, rowY - 2, 240, kRowHeight,
+                                        (_reorderable && _ctrlHeld) ? TFT_DARKCYAN : TFT_BLUE);
 
         uint16_t valueColor;
         String value = secondaryText(entity, valueColor);
@@ -146,6 +147,13 @@ void EntityList::draw(M5Canvas& canvas, bool showStar) {
     drawScrollbar(canvas);
 }
 
+void EntityList::moveSelection(int direction) {
+    int target = _selectedIndex + direction;
+    if (target < 0 || target >= (int)items.size()) return;
+    _selectedIndex = target;
+    scrollToSelection();
+}
+
 EntityList::Input EntityList::handleInput(KeyboardManager& keyboard) {
     Input result;
     if (items.empty()) return result;
@@ -153,7 +161,22 @@ EntityList::Input EntityList::handleInput(KeyboardManager& keyboard) {
     int rows = rowsPerPage();
     if (rows < 1) rows = 1;
 
+    _ctrlHeld = keyboard.isCtrlHeld();
+
     int direction = _scrollRepeater.update(keyboard);
+
+    // Carry the row rather than moving the highlight past it. The view performs
+    // the swap and then calls moveSelection() so the highlight follows the row
+    // it is holding.
+    if (direction != 0 && _reorderable && _ctrlHeld) {
+        int target = _selectedIndex + direction;
+        if (target >= 0 && target < (int)items.size()) {
+            result.reorder = direction;
+            result.changed = true;
+        }
+        return result;
+    }
+
     if (direction < 0) {
         if (_selectedIndex == 0) {
             result.hitTop = true;

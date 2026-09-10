@@ -70,5 +70,28 @@ The device has ~320KB of usable RAM. Home Assistant instances can have thousands
 - Modal windows (like `EntityDetailView`) should NOT clear the screen. Instead, they should be drawn *over* the `_tabController.drawActiveView(_display)` to create a floating window effect.
 - Coordinates are hardcoded for a 240x135 display. Always calculate relative to these bounds.
 
+**Keyboard (M5Cardputer driver):**
+When a key "does nothing", suspect the driver before the app code. Three bugs
+have come from the same two places, so check these first:
+
+- `Keyboard_Class::KeysState` has **both** `.backspace` and `.del`. The plain
+  key sets `.backspace`; Fn maps it to `KEY_DELETE`, which sets `.del`. Checking
+  only one makes the key appear to need Fn.
+- The arrow keys are aliases on printable keys, and the driver substitutes a
+  key's **shifted** character whenever Ctrl, Shift or caps lock is held
+  (`Keyboard.cpp`, PASS 3). The table in `Keyboard.h` is
+  `{';', ':', KEY_UP}`, `{'.', '>', KEY_DOWN}`, `{',', '<', KEY_LEFT}`,
+  `{'/', '?', KEY_RIGHT}`. So any chord built on a direction key must match the
+  second column too, or it silently never fires. `KeyboardManager`'s
+  `charPressed()` / `charHeldNow()` helpers take both forms; use them for any
+  new alias rather than a bare `std::find`.
+- `getNewChars()` drops `` ` `` and `~`. They are real printable keys, but the
+  app treats them as back/escape everywhere, so a text field that appended them
+  would insert a character and delete it in the same frame.
+
+Read the pinned library under `.pio/libdeps/m5stack-stamps3/M5Cardputer/` to
+confirm behaviour rather than reasoning from the key legends on the case; the
+ADV's keyboard is a TCA8418 and does not behave like the original matrix.
+
 **Versioning:**
 - Because Nix overrides `__DATE__` to a deterministic epoch (1980), we use `git_version.py` as a `pre:` script in `platformio.ini` to inject the short git hash into the `ADVHOME_VERSION` macro for version tracking.

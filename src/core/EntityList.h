@@ -24,6 +24,7 @@ public:
         bool hitTop = false;     // Up pressed while already on the first row
         int adjust = 0;          // -1 / +1 from the +/- keys
         bool favToggle = false;  // Ctrl-F
+        int reorder = 0;         // -1 / +1 from Ctrl+Up / Ctrl+Down
     };
 
     EntityList(EntityManager& entityManager, ConfigManager& config);
@@ -31,6 +32,10 @@ public:
     std::vector<const Entity*> items;
 
     void setTopY(int topY) { _topY = topY; }
+    // Only lists whose order is user-defined opt in, so Ctrl+arrow stays inert
+    // everywhere else rather than silently doing nothing.
+    void setReorderable(bool on) { _reorderable = on; }
+    void moveSelection(int direction);
     int rowsPerPage() const { return (135 - _topY) / kRowHeight; }
     int selectedIndex() const { return _selectedIndex; }
     const Entity* current() const;
@@ -56,6 +61,8 @@ private:
     EntityManager& _entityManager;
     ConfigManager& _config;
     int _topY = 25;
+    bool _reorderable = false;
+    bool _ctrlHeld = false;
     int _selectedIndex = 0;
     int _scrollOffset = 0;
     ScrollRepeater _scrollRepeater;

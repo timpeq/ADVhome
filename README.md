@@ -147,6 +147,7 @@ The full list lives on the device under **Menu > Help & Shortcuts**. In summary:
 - `+` / `-`: adjust brightness or volume from the list
 - Typing letters: jump to the first entity whose name starts with what you typed
 - `Ctrl-F`: add or remove the selected entity from Favorites
+- `Ctrl` + Up / Down: carry the highlighted favorite up or down the list
 - `Tab`: next tab. Inside a detail window it closes the window instead.
 - `Backspace`, `Esc`, `` ` ``, or `~`: delete text, close a detail window, or
   return from a Menu page to the menu list
@@ -155,6 +156,16 @@ The full list lives on the device under **Menu > Help & Shortcuts**. In summary:
 document said they did. They are ordinary letters and feed the type-ahead search
 like any other; only the initial Wi-Fi network picker, which has no type-ahead,
 treats `W` and `S` as up and down.
+
+Favorites are shown in the order you arrange them when **Favorites Sort** is set
+to `ORDER`. To change that order, open the **Entities** tab, switch to the
+**Favorites** sub-tab, and hold `Ctrl` while pressing Up or Down: the highlighted
+row is carried rather than passed over, and the highlight turns cyan while `Ctrl`
+is held. Reordering is deliberately unavailable from the Home screen, which is
+for using favorites rather than arranging them, and is inert while the sort is
+set to `NAME` because the list would immediately re-sort. The new order is held
+in memory and written to storage 1.5 seconds after the last move, so carrying a
+row several places costs one write rather than one per step.
 
 The `Space` toggle and the `+`/`-` adjustment act on a highlighted row without
 opening it, which is quick but easy to trigger by accident. Both can be turned

@@ -39,6 +39,12 @@ public:
     uint32_t getFavoritesRevision() const { return _favRevision; }
     int getFavoritesSort();
     void setFavoritesSort(int sort);
+
+    // Reordering swaps in RAM and bumps the revision so lists redraw at once.
+    // The NVS write is deferred: holding Ctrl-Down to carry a row several
+    // places would otherwise be one flash write per step.
+    bool swapFavorites(const String& a, const String& b);
+    void flushPendingFavorites();
     
     // UI Settings
     bool getShowBattery();
@@ -116,6 +122,8 @@ private:
     std::vector<String> _favorites;
     bool _favLoaded = false;
     uint32_t _favRevision = 0;
+    bool _favDirty = false;
+    uint32_t _favDirtyAt = 0;
 
     // Cached copies of settings read every loop() iteration by checkPowerManagement();
     // avoids hammering NVS (and flooding logs with NOT_FOUND) when keys are unset.

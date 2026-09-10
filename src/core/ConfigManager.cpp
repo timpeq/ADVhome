@@ -1,4 +1,5 @@
 #include "ConfigManager.h"
+#include <algorithm>
 
 ConfigManager::ConfigManager() {}
 
@@ -123,6 +124,35 @@ bool ConfigManager::isFavorite(const String& entity_id) {
         if (fav == entity_id) return true;
     }
     return false;
+}
+
+bool ConfigManager::swapFavorites(const String& a, const String& b) {
+    loadFavorites();
+    int ia = -1, ib = -1;
+    for (size_t i = 0; i < _favorites.size(); i++) {
+        if (_favorites[i] == a) ia = i;
+        else if (_favorites[i] == b) ib = i;
+    }
+    if (ia < 0 || ib < 0) return false;
+
+    std::swap(_favorites[ia], _favorites[ib]);
+    _favRevision++;
+    _favDirty = true;
+    _favDirtyAt = millis();
+    return true;
+}
+
+void ConfigManager::flushPendingFavorites() {
+    if (!_favDirty) return;
+    if (millis() - _favDirtyAt < 1500) return;
+    _favDirty = false;
+
+    String favStr = "";
+    for (const auto& fav : _favorites) {
+        if (favStr.length() > 0) favStr += ",";
+        favStr += fav;
+    }
+    _prefs.putString("favorites", favStr);
 }
 
 int ConfigManager::getFavoritesSort() {

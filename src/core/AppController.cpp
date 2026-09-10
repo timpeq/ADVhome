@@ -36,6 +36,8 @@ void AppController::update() {
     if (_haManager) {
         _haManager->update();
     }
+
+    _config.flushPendingFavorites();
     
     _redraw = false;
     

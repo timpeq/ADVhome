@@ -42,6 +42,14 @@ public:
     std::vector<char> getNewChars() const;
     
 private:
+    // The driver substitutes a key's shifted character whenever Ctrl, Shift or
+    // caps lock is active, so ';' arrives as ':' under Ctrl. Every alias below
+    // therefore has to be matched in both forms.
+    bool charHeldNow(char plain, char shifted) const;
+    bool charWasHeld(char plain, char shifted) const;
+    bool charPressed(char plain, char shifted) const;
+    bool charReleased(char plain, char shifted) const;
+
     Keyboard_Class::KeysState _lastStatus;
     Keyboard_Class::KeysState _currentStatus;
     bool _goActsAsEnter = true;

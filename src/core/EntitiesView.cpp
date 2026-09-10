@@ -140,6 +140,10 @@ void EntitiesView::draw(DisplayManager& display) {
 }
 
 bool EntitiesView::handleInput(KeyboardManager& keyboard) {
+    // Reordering only means anything on the Favorites sub-tab, and only while
+    // the sort is "Order"; under "Name" the list would snap straight back.
+    _list.setReorderable(currentDomain() == "Favorites" && _config.getFavoritesSort() == 0);
+
     if (keyboard.wasLeftPressed()) {
         stepTab(-1);
         _subTabFocus = true;
@@ -170,6 +174,20 @@ bool EntitiesView::handleInput(KeyboardManager& keyboard) {
     const Entity* item = _list.current();
     if (!item) return handled;
     String id = item->id;
+
+    if (input.reorder != 0) {
+        // Swap with the neighbouring *visible* row rather than moving one place
+        // in storage: a hidden unavailable favourite in between would otherwise
+        // swallow the press.
+        int idx = _list.selectedIndex();
+        int other = idx + input.reorder;
+        if (other >= 0 && other < (int)_list.items.size() &&
+            _config.swapFavorites(id, _list.items[other]->id)) {
+            refreshCache();
+            _list.moveSelection(input.reorder);
+        }
+        return true;
+    }
 
     if (input.adjust != 0 && _onEntityAdjust) {
         _onEntityAdjust(id, input.adjust);
