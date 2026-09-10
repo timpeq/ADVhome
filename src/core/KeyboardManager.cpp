@@ -31,6 +31,11 @@ bool KeyboardManager::wasBackspacePressed() const {
 std::vector<char> KeyboardManager::getNewChars() const {
     std::vector<char> new_chars;
     for (char c : _currentStatus.word) {
+        // The backspace key reports itself as a word character as well as
+        // setting del, so a text field that appends every new char would insert
+        // a backtick and then delete it again, and backspace would appear dead.
+        // Nothing else in the app consumes these, so drop them at the source.
+        if (c == '`' || c == '~') continue;
         bool was_pressed = false;
         for (char lc : _lastStatus.word) {
             if (c == lc) { 

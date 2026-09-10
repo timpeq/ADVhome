@@ -54,6 +54,8 @@ private:
     int _ttsVolume;
     bool _ttsDebug;
     bool _goToChat;
+    bool _listToggle;
+    bool _listAdjust;
     String _voicePipelineName;
     ScrollRepeater _scrollRepeater;
     ScrollRepeater _valueRepeater;

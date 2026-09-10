@@ -138,14 +138,28 @@ Create the long-lived access token in Home Assistant from your user profile page
 
 ## Controls
 
-- `W` / `S`, or Up / Down: move through lists
-- `Enter`, `Space`, or Cardputer button A: select or submit
-- `Backspace`, `Esc`, `` ` ``, or `~`: delete text or go back, depending on the active view
-- `A` / `D`, or Left / Right: change the Entities sub-tab (domain)
-- `Tab`: switch between interface sections where supported
+The full list lives on the device under **Menu > Help & Shortcuts**. In summary:
+
+- Up / Down, or `;` and `.`: move through lists
+- Left / Right, or `,` and `/`: change the Entities sub-tab (domain)
+- `Enter`: open the selected entity, or run the action in a detail window
+- `Space`: toggle the highlighted entity without opening it
+- `+` / `-`: adjust brightness or volume from the list
 - Typing letters: jump to the first entity whose name starts with what you typed
 - `Ctrl-F`: add or remove the selected entity from Favorites
-- `Backspace` / `Esc` in the Menu tab: return from a page to the menu list
+- `Tab`: next tab. Inside a detail window it closes the window instead.
+- `Backspace`, `Esc`, `` ` ``, or `~`: delete text, close a detail window, or
+  return from a Menu page to the menu list
+
+`W`/`S` and `A`/`D` do **not** navigate entity lists. Earlier versions of this
+document said they did. They are ordinary letters and feed the type-ahead search
+like any other; only the initial Wi-Fi network picker, which has no type-ahead,
+treats `W` and `S` as up and down.
+
+The `Space` toggle and the `+`/`-` adjustment act on a highlighted row without
+opening it, which is quick but easy to trigger by accident. Both can be turned
+off under **Menu > Settings** ("SPACE Toggles in List" and "+/- Adjusts in
+List").
 
 The Chat tab sends text through Home Assistant's authenticated WebSocket
 `conversation/process` command and keeps the returned conversation ID for
@@ -157,26 +171,37 @@ transcript and agent response as text.
 
 ### Voice roadmap
 
-The Cardputer hardware includes a microphone and speaker, so push-to-talk voice
-interaction is feasible, but it is a separate project from text chat. The
-firmware would need to capture and buffer microphone audio, negotiate an Assist
-pipeline session with Home Assistant, stream audio in the format that pipeline
-expects, decode the returned audio, and handle speaker timing. The existing
-authenticated WebSocket is the likely control and event transport, but voice
-audio should not be assumed to be identical to the JSON entity messages; the
-Assist pipeline's audio framing and session lifecycle need to be verified.
+**This shipped on 2026-09-07.** Push-to-talk capture and spoken replies both
+work; the estimate below is left in place because it was wrong by a wide margin
+and that is worth remembering.
 
-Estimated effort: microphone capture and a push-to-talk UI are medium effort
-(about 1-2 weeks); end-to-end Assist pipeline streaming and playback are high
-effort (about 2-4 additional weeks), mainly because of audio buffering,
-encoding/decoding, and limited RAM. A text Chat fallback should remain even
-after voice support is added.
+One detail from building it is worth recording: the Assist pipeline's own TTS
+stage returns MP3, which is not practical to decode in the RAM and flash left on
+this device. ADVhome therefore stops the pipeline at `intent` and calls
+`/api/tts_get_url` itself with `preferred_format=wav`, which `M5.Speaker` can
+play directly.
+
+The original estimate, from before any of it was attempted:
+
+> The Cardputer hardware includes a microphone and speaker, so push-to-talk voice
+> interaction is feasible, but it is a separate project from text chat. The
+> firmware would need to capture and buffer microphone audio, negotiate an Assist
+> pipeline session with Home Assistant, stream audio in the format that pipeline
+> expects, decode the returned audio, and handle speaker timing.
+>
+> Estimated effort: microphone capture and a push-to-talk UI are medium effort
+> (about 1-2 weeks); end-to-end Assist pipeline streaming and playback are high
+> effort (about 2-4 additional weeks), mainly because of audio buffering,
+> encoding/decoding, and limited RAM.
+
+A text Chat fallback remains available and can be used without voice.
 
 ## Menu
 
 The rightmost tab is the Menu, drawn as a hamburger icon. It shows the app name
 and the build's git revision, and opens four pages:
 
+- **Help & Shortcuts** — every keyboard shortcut in the firmware.
 - **Settings** — the former Config list: battery visibility, Chat tab visibility,
   reconnect interval, back-button behavior, scroll repeat timing, TTS volume and
   pipeline, power timeouts, and the Diagnostics page. Chat is enabled by default
@@ -221,7 +246,9 @@ src/core/HomeAssistantManager.*
 src/core/EntityManager.*      Cached Home Assistant entities
 src/core/EntityList.*         Shared scrolling entity list (rows, scrollbar, type-ahead)
 src/core/MenuView.*           Menu tab; hosts the pages below as sub-views
+src/core/TextPageView.*       Shared scrolling page of static text
 src/core/AboutView.*          On-device about, license, and attribution page
+src/core/HelpView.*           On-device keyboard shortcut reference
 src/core/NetworkView.*        Connection summary with a confirmed reset action
 src/core/*View.*              Main, detail, configuration, favorites, and diagnostic views
 tools/flash_slot.py           Resolves the target app slot from the device's partition table

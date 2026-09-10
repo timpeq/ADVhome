@@ -74,3 +74,54 @@ network is never stranded. Everything below is deferred.
       pick between them.
 - [ ] Add a "Test connection" action that validates a URL and token before
       saving, so a typo does not require a reboot to discover.
+
+## Phase 6: First Public Release
+
+Everything that has to be true before the repository goes public and the M5Stack
+forum post goes up. Ordered roughly by what blocks what.
+
+**Off-device, on Tim:**
+
+- [ ] **Set up the `peq.me/advhome` redirect on the Caddy server.** The About &
+      License page on the device and `THIRD-PARTY-NOTICES.md` both point people
+      there, and the LGPL-2.1 relink obligation is satisfied by that link
+      resolving to the source. It must exist before any binary is handed out.
+      Point it at the GitHub repository once that exists:
+      `redir /advhome https://github.com/timpeq/advhome permanent`
+- [ ] Create the GitHub repository and push `master`. Currently the only remote
+      is `omen`, which is Tim's own machine.
+- [ ] Publish the remote-reflex car audio post on peq.me first, then the ADVhome
+      post one to two weeks later. Drafts live in `~/code/advhome-blog/posts/`.
+
+**In the repository:**
+
+- [x] Update the README's "Voice roadmap" section. It still describes voice as
+      unimplemented and estimates 2-4 weeks; voice shipped on 2026-09-07. Add a
+      "this shipped" note rather than deleting the estimate.
+- [ ] Add a CONTRIBUTING or issue template asking for the things a bug report
+      actually needs: Home Assistant version, entity domain, what the Cardputer
+      showed versus what HA shows, serial output, and standalone vs. M5Launcher.
+- [ ] Decide what to do about the tracked `advhome.bin`, `advhome_merged.bin`
+      and `ptable.bin` at the repository root. Shipping a stale merged image
+      next to a warning never to flash it is a foot-gun for a new reader.
+- [ ] Take screenshots or photos of the Home, Entities, detail, Chat and Menu
+      screens for the README and the forum post.
+- [ ] Confirm first-boot works from a fully erased device, not just from an
+      already-configured one.
+
+**Polish still open:**
+
+- [x] Audit the remaining hint lines outside `EntityDetailView` for the shared
+      footer position and colour.
+- [x] Add an on-device Help & Shortcuts page, compiled from the input handlers.
+- [x] Tell a new device's empty Favorites screen how to add favorites.
+- [x] Make the list SPACE toggle and +/- adjustment optional settings.
+- [ ] Decide whether `W`/`S` and `A`/`D` should navigate entity lists. They do
+      not today: they feed the type-ahead search like any other letter, and only
+      the Wi-Fi picker treats `W`/`S` as up and down. The README claimed
+      otherwise until now. Either wire them up and lose those letters from
+      type-ahead, or leave it and keep the docs honest.
+- [ ] Surface `P` (play/pause) and `S` (stop) in the media player's on-screen
+      hint, or drop them. They work but only the Help page mentions them.
+- [ ] Check the detail window's layout for every supported domain at both short
+      and long state strings, including `unavailable`.

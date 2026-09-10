@@ -45,8 +45,8 @@ void NetworkView::draw(DisplayManager& display) {
     canvas->setCursor(10, buttonY + 5);
     canvas->print(_armed ? "ENTER again to confirm" : _actionLabel);
 
-    canvas->setTextColor(TFT_DARKGREY);
-    canvas->setCursor(5, 122);
+    canvas->setTextColor(0x6B6D);
+    canvas->setCursor(10, 123);
     canvas->print(_armed ? "ESC cancels. Device reboots." : "ENTER to change");
 }
 

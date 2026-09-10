@@ -178,7 +178,7 @@ bool EntitiesView::handleInput(KeyboardManager& keyboard) {
     if (keyboard.wasEnterPressed()) {
         if (_onEntitySelect) _onEntitySelect(id);
         handled = true;
-    } else if (keyboard.wasSpacePressed()) {
+    } else if (keyboard.wasSpacePressed() && _config.getListToggleEnabled()) {
         if (_onEntityToggle) _onEntityToggle(id);
         handled = true;
     }

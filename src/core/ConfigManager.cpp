@@ -166,6 +166,22 @@ void ConfigManager::setGoButtonToChat(bool on) {
     _prefs.putBool("goToChat", on);
 }
 
+bool ConfigManager::getListToggleEnabled() {
+    return _prefs.getBool("listToggle", true);
+}
+
+void ConfigManager::setListToggleEnabled(bool on) {
+    _prefs.putBool("listToggle", on);
+}
+
+bool ConfigManager::getListAdjustEnabled() {
+    return _prefs.getBool("listAdjust", true);
+}
+
+void ConfigManager::setListAdjustEnabled(bool on) {
+    _prefs.putBool("listAdjust", on);
+}
+
 bool ConfigManager::getTtsEnabled() {
     return _prefs.getBool("ttsEnabled", true);
 }

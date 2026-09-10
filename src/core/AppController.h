@@ -17,6 +17,7 @@
 #include "ChatView.h"
 #include "MenuView.h"
 #include "AboutView.h"
+#include "HelpView.h"
 #include "NetworkView.h"
 #include <Arduino.h>
 
@@ -53,6 +54,7 @@ private:
     ChatView* _chatView = nullptr;
     MenuView* _menuView = nullptr;
     AboutView* _aboutView = nullptr;
+    HelpView* _helpView = nullptr;
     NetworkView* _wifiView = nullptr;
     NetworkView* _haView = nullptr;
     EntityDetailView* _detailView = nullptr;

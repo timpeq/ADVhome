@@ -15,6 +15,8 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, Ho
     _settings.push_back({"GO Btn to Chat", 21});
     _settings.push_back({"Battery % in Tab", 0});
     _settings.push_back({"Hide Unavail Home", 9});
+    _settings.push_back({"SPACE Toggles in List", 23});
+    _settings.push_back({"+/- Adjusts in List", 24});
     _settings.push_back({"Favorites Sort", 2});
     _settings.push_back({"Temp Step", 22});
     _settings.push_back({"Scroll Start Delay", 5});
@@ -48,6 +50,8 @@ void ConfigView::refreshValues() {
     _ttsDebug = _config.getTtsDebug();
     _goToChat = _config.getGoButtonToChat();
     _voicePipelineName = _config.getVoicePipelineName();
+    _listToggle = _config.getListToggleEnabled();
+    _listAdjust = _config.getListAdjustEnabled();
 }
 
 void ConfigView::onEnter() {
@@ -97,6 +101,12 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 16) {
             canvas->print(_showChat ? "YES" : "NO");
             canvas->setTextColor(_showChat ? TFT_GREEN : TFT_LIGHTGREY);
+        } else if (_settings[i].type == 23) {
+            canvas->print(_listToggle ? "ON" : "OFF");
+            canvas->setTextColor(_listToggle ? TFT_GREEN : TFT_RED);
+        } else if (_settings[i].type == 24) {
+            canvas->print(_listAdjust ? "ON" : "OFF");
+            canvas->setTextColor(_listAdjust ? TFT_GREEN : TFT_RED);
         } else if (_settings[i].type == 2) {
             canvas->print(_favoritesSort == 0 ? "ORDER" : "NAME");
             canvas->setTextColor(TFT_CYAN);
@@ -215,6 +225,12 @@ void ConfigView::toggleCurrent(int direction) {
         _showChat = !_showChat;
         _config.setShowChat(_showChat);
         if (_onSettingsChanged) _onSettingsChanged();
+    } else if (_settings[_selectedIndex].type == 23) {
+        _listToggle = !_listToggle;
+        _config.setListToggleEnabled(_listToggle);
+    } else if (_settings[_selectedIndex].type == 24) {
+        _listAdjust = !_listAdjust;
+        _config.setListAdjustEnabled(_listAdjust);
     } else if (_settings[_selectedIndex].type == 10) {
         _brightness += 25 * direction;
         if (_brightness > 255) _brightness = 255;

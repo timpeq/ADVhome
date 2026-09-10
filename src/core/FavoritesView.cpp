@@ -58,14 +58,32 @@ void FavoritesView::draw(DisplayManager& display) {
     refreshCache();
 
     if (_list.items.empty()) {
+        // First screen a new device shows, so it spells out the whole loop
+        // rather than assuming TAB is a known way between tabs.
         canvas->setTextSize(1);
-        canvas->setCursor(5, 45);
         canvas->setTextColor(TFT_LIGHTGREY);
-        canvas->println("No favorites yet.");
-        canvas->setCursor(5, 60);
-        canvas->println("Press Ctrl-F in Entities");
-        canvas->setCursor(5, 75);
-        canvas->println("tab to add some.");
+        canvas->setCursor(5, 44);
+        canvas->print("No favorites yet.");
+
+        canvas->setTextColor(TFT_CYAN);
+        canvas->setCursor(5, 62);
+        canvas->print("1.");
+        canvas->setCursor(5, 76);
+        canvas->print("2.");
+        canvas->setCursor(5, 90);
+        canvas->print("3.");
+
+        canvas->setTextColor(TFT_LIGHTGREY);
+        canvas->setCursor(22, 62);
+        canvas->print("TAB to the Entities tab");
+        canvas->setCursor(22, 76);
+        canvas->print("Highlight something");
+        canvas->setCursor(22, 90);
+        canvas->print("Ctrl-F adds it here");
+
+        canvas->setTextColor(0x6B6D);
+        canvas->setCursor(5, 110);
+        canvas->print("Menu > Help lists every key");
         return;
     }
 
@@ -90,7 +108,7 @@ bool FavoritesView::handleInput(KeyboardManager& keyboard) {
     if (keyboard.wasEnterPressed()) {
         if (_onEntitySelect) _onEntitySelect(id);
         handled = true;
-    } else if (keyboard.wasSpacePressed()) {
+    } else if (keyboard.wasSpacePressed() && _config.getListToggleEnabled()) {
         if (_onEntityToggle) _onEntityToggle(id);
         handled = true;
     }

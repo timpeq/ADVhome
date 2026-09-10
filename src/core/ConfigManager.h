@@ -52,6 +52,14 @@ public:
 
     bool getGoButtonToChat();
     void setGoButtonToChat(bool on);
+
+    // List shortcuts. Both act on the highlighted row without opening it, which
+    // is fast but easy to trigger by accident, so each can be turned off.
+    bool getListToggleEnabled();
+    void setListToggleEnabled(bool on);
+
+    bool getListAdjustEnabled();
+    void setListAdjustEnabled(bool on);
     
     bool getTtsEnabled();
     void setTtsEnabled(bool enabled);

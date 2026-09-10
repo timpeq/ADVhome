@@ -15,15 +15,23 @@ void drawMenuIcon(M5Canvas& canvas, int centerX, int centerY, uint16_t color) {
 }
 
 void drawLightIcon(M5Canvas& canvas, int centerX, int centerY, bool isOn, uint16_t color) {
-    uint16_t iconColor = isOn ? color : TFT_DARKGREY;
-    canvas.fillCircle(centerX, centerY, 5, iconColor);
-    canvas.drawCircle(centerX, centerY, 7, iconColor);
-    canvas.drawLine(centerX, centerY + 7, centerX, centerY + 10, iconColor);
-    canvas.drawLine(centerX - 3, centerY + 8, centerX + 3, centerY + 8, iconColor);
+    // A bulb, not a balloon: glass on top, a short neck, then a screw base.
+    // The whole glyph stays within centerY-10..centerY+8 so it cannot reach up
+    // into the detail window's title bar.
+    uint16_t glass = isOn ? color : TFT_DARKGREY;
+
+    canvas.fillCircle(centerX, centerY - 3, 5, glass);
+    canvas.fillRect(centerX - 3, centerY + 1, 6, 2, glass);
+
+    canvas.fillRect(centerX - 3, centerY + 3, 6, 5, TFT_LIGHTGREY);
+    canvas.drawFastHLine(centerX - 3, centerY + 5, 6, TFT_DARKGREY);
+
     if (isOn) {
-        canvas.drawLine(centerX - 10, centerY, centerX - 7, centerY, color);
-        canvas.drawLine(centerX + 7, centerY, centerX + 10, centerY, color);
-        canvas.drawLine(centerX, centerY - 10, centerX, centerY - 7, color);
+        canvas.drawFastVLine(centerX, centerY - 10, 2, color);
+        canvas.drawFastHLine(centerX - 10, centerY - 3, 2, color);
+        canvas.drawFastHLine(centerX + 9, centerY - 3, 2, color);
+        canvas.drawLine(centerX - 8, centerY - 8, centerX - 7, centerY - 7, color);
+        canvas.drawLine(centerX + 8, centerY - 8, centerX + 7, centerY - 7, color);
     }
 }
 

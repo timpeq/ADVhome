@@ -322,6 +322,7 @@ void AppController::updateHAConnected() {
         _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSeekMedia, onSecureService, onSetClimateTemp, onSetClimateRange, onSetHvacMode);
         
         _aboutView = new AboutView(_config);
+        _helpView = new HelpView(_config);
 
         _wifiView = new NetworkView(
             "Wi-Fi", "Forget network and rescan",
@@ -349,6 +350,7 @@ void AppController::updateHAConnected() {
 
         _menuView = new MenuView(_config, ADVHOME_VERSION);
         _menuView->addItem("Settings", _configView);
+        _menuView->addItem("Help & Shortcuts", _helpView);
         _menuView->addItem("Wi-Fi", _wifiView);
         _menuView->addItem("Home Assistant", _haView);
         _menuView->addItem("About & License", _aboutView);

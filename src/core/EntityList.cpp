@@ -169,8 +169,10 @@ EntityList::Input EntityList::handleInput(KeyboardManager& keyboard) {
         }
         result.changed = true;
     } else {
-        result.adjust = _valueRepeater.updatePlusMinus(keyboard);
-        if (result.adjust != 0) result.changed = true;
+        if (_config.getListAdjustEnabled()) {
+            result.adjust = _valueRepeater.updatePlusMinus(keyboard);
+            if (result.adjust != 0) result.changed = true;
+        }
     }
 
     for (char c : keyboard.getNewChars()) {

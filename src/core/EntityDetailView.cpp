@@ -3,6 +3,20 @@
 #include "Graphics.h"
 #include "Format.h"
 
+namespace {
+// The detail window spans x 4..236 and y 20..134, with a title bar through y 34.
+// Everything below is measured off that frame so the domain icon, the state
+// text and the hint line land in the same place for every domain.
+constexpr int CONTENT_LEFT = 10;
+constexpr int STATE_Y = 40;
+constexpr int ICON_CX = 216;
+constexpr int ICON_CY = 46;
+constexpr int HINT_Y = 123;
+constexpr uint16_t HINT_COLOR = 0x6B6D;
+// Characters that fit left of the icon column at text size 1.
+constexpr int STATE_MAX_CHARS = 30;
+}
+
 EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, std::function<void(String, float)> onSeekMedia, std::function<void(String, String, String, String)> onSecureService, std::function<void(String, float)> onSetClimateTemp, std::function<void(String, float, float)> onSetClimateRange, std::function<void(String, String)> onSetHvacMode, bool showEntityName)
     : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _onSeekMedia(onSeekMedia), _onSecureService(onSecureService), _onSetClimateTemp(onSetClimateTemp), _onSetClimateRange(onSetClimateRange), _onSetHvacMode(onSetHvacMode), _config(config), _scrollRepeater(config), _seekRepeater(config), _climateRepeater(config), _showEntityName(showEntityName) {}
 
@@ -46,7 +60,7 @@ void EntityDetailView::draw(DisplayManager& display) {
     }
 
     // Content
-    canvas->setCursor(10, 40);
+    canvas->setCursor(CONTENT_LEFT, STATE_Y);
     canvas->setTextColor(TFT_WHITE);
     
     String dispState = entity.state;
@@ -66,22 +80,24 @@ void EntityDetailView::draw(DisplayManager& display) {
         }
         
         if (entity.domain == "media_player") {
-            canvas->setCursor(30, 40); // Tastefully indented for media player
-            canvas->println(dispState);
+            canvas->setCursor(CONTENT_LEFT, STATE_Y);
+            canvas->print(TextScroller::visible(dispState, STATE_MAX_CHARS));
         } else {
             canvas->print("State: ");
-            canvas->println(dispState);
+            // "State: " eats seven characters; clip the rest so a long value
+            // like "unavailable" cannot run under the domain icon.
+            canvas->print(TextScroller::visible(dispState, STATE_MAX_CHARS - 7));
         }
     }
 
     if (entity.domain == "light") {
-        Graphics::drawLightIcon(*canvas, 218, 42, entity.state == "on", entity.state == "on" ? TFT_YELLOW : TFT_LIGHTGREY);
+        Graphics::drawLightIcon(*canvas, ICON_CX, ICON_CY, entity.state == "on", entity.state == "on" ? TFT_YELLOW : TFT_LIGHTGREY);
     } else if (entity.domain == "switch") {
-        Graphics::drawToggle(*canvas, 218, 42, entity.state == "on", entity.state == "on" ? TFT_GREEN : TFT_LIGHTGREY);
+        Graphics::drawToggle(*canvas, ICON_CX, ICON_CY, entity.state == "on", entity.state == "on" ? TFT_GREEN : TFT_LIGHTGREY);
     } else if (entity.domain == "alarm_control_panel") {
-        Graphics::drawAlarmIcon(*canvas, 218, 42, entity.state != "disarmed", entity.state != "disarmed" ? TFT_RED : TFT_LIGHTGREY);
+        Graphics::drawAlarmIcon(*canvas, ICON_CX, ICON_CY, entity.state != "disarmed", entity.state != "disarmed" ? TFT_RED : TFT_LIGHTGREY);
     } else if (entity.domain == "media_player") {
-        Graphics::drawPlaybackIcon(*canvas, 218, 42, entity.state, entity.state == "playing" ? TFT_GREEN : TFT_LIGHTGREY);
+        Graphics::drawPlaybackIcon(*canvas, ICON_CX, ICON_CY, entity.state, entity.state == "playing" ? TFT_GREEN : TFT_LIGHTGREY);
     }
     
     // Instructions
@@ -101,7 +117,7 @@ void EntityDetailView::draw(DisplayManager& display) {
             canvas->setCursor(10, infoY);
             canvas->setTextColor(TFT_WHITE);
             canvas->setTextSize(2);
-            String title = TextScroller::visible(ms.title, 18);
+            String title = TextScroller::visible(ms.title, 16);
             canvas->print(title);
             infoY += 18;
         }
@@ -147,7 +163,17 @@ void EntityDetailView::draw(DisplayManager& display) {
             int fillWidth = (int)(180.0f * progress);
             canvas->fillRect(10, infoY, fillWidth, 5, TFT_CYAN);
             infoY += 8;
+        } else if (!showMediaTitle && ms.artist.isEmpty()) {
+            // Nothing is playing. The corner note would sit on top of the
+            // stopped/off state icon, and the middle of the window is empty, so
+            // the placeholder moves to the centre and says what it means.
+            Graphics::drawMusicIcon(*canvas, 119, 70, 0x4A69);
+            canvas->setTextSize(1);
+            canvas->setTextColor(HINT_COLOR);
+            canvas->setCursor(75, 90);
+            canvas->print("Nothing playing");
         } else {
+            // Playing, but no duration to draw a bar from (a live stream).
             Graphics::drawMusicIcon(*canvas, 215, infoY + 7, TFT_CYAN);
         }
         
@@ -171,32 +197,34 @@ void EntityDetailView::draw(DisplayManager& display) {
         }
         
         // Controls help at bottom
-        canvas->setCursor(10, 123);
-        canvas->setTextColor(0x6B6D);
+        canvas->setCursor(CONTENT_LEFT, HINT_Y);
+        canvas->setTextColor(HINT_COLOR);
         canvas->print("ENT:Play +/-:Vol </>:Skip M:Mute");
     } else {
-        canvas->setCursor(10, 95);
-        canvas->setTextColor(TFT_LIGHTGREY);
+        // Was floating at y=95 in light grey while media and climate used the
+        // window footer; all three now share one line.
+        canvas->setCursor(CONTENT_LEFT, HINT_Y);
+        canvas->setTextColor(HINT_COLOR);
         if (entity.domain == "light" || entity.domain == "switch" || entity.domain == "fan" || entity.domain == "input_boolean") {
-            canvas->println("ENTER: Toggle on/off");
+            canvas->print("ENTER: Toggle on/off");
         } else if (entity.domain == "cover") {
-            canvas->println("ENTER: Toggle open/close");
+            canvas->print("ENTER: Toggle open/close");
         } else if (entity.domain == "lock") {
             if (entity.state == "locked") {
-                canvas->println("ENTER: Unlock");
+                canvas->print("ENTER: Unlock");
             } else {
-                canvas->println("ENTER: Lock");
+                canvas->print("ENTER: Lock");
             }
         } else if (entity.domain == "script" || entity.domain == "button") {
-            canvas->println("ENTER: Execute");
+            canvas->print("ENTER: Execute");
         } else if (entity.domain == "scene") {
-            canvas->println("ENTER: Activate");
+            canvas->print("ENTER: Activate");
         } else if (entity.domain == "automation") {
-            canvas->println("ENTER: Trigger");
+            canvas->print("ENTER: Trigger");
         } else if (entity.domain == "alarm_control_panel") {
-            canvas->println("ENTER: Arm/disarm");
+            canvas->print("ENTER: Arm/disarm");
         } else {
-            canvas->println("No actions available");
+            canvas->print("No actions available");
         }
     }
 
@@ -216,7 +244,7 @@ void EntityDetailView::drawClimate(M5Canvas* canvas, const Entity& entity) {
     else if (entity.state == "dry") modeColor = TFT_YELLOW;
 
     canvas->setTextSize(1);
-    canvas->setCursor(10, 40);
+    canvas->setCursor(CONTENT_LEFT, STATE_Y);
     canvas->setTextColor(TFT_LIGHTGREY);
     canvas->print("Mode: ");
     canvas->setTextColor(modeColor);
@@ -262,8 +290,8 @@ void EntityDetailView::drawClimate(M5Canvas* canvas, const Entity& entity) {
         canvas->print(Format::rounded(c.currentHumidity) + "% RH");
     }
 
-    canvas->setCursor(10, 123);
-    canvas->setTextColor(0x6B6D);
+    canvas->setCursor(CONTENT_LEFT, HINT_Y);
+    canvas->setTextColor(HINT_COLOR);
     canvas->print(c.hvacModes.isEmpty() ? "+/- Temp" : "+/- Temp   ENTER Mode");
 }
 
