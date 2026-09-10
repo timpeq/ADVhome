@@ -260,8 +260,8 @@ light sleep, so the gesture is never a no-op. A progress bar appears after about
 key produces no other feedback and the device cannot sleep until every key is
 up.
 
-`LIGHT` has been exercised on a Cardputer ADV; `DEEP` uses a different wake
-mechanism (`ext1` rather than light sleep's GPIO wake) and has not been tested.
+Both depths have been exercised on a Cardputer ADV, including `DEEP`, which uses
+`ext1` rather than light sleep's GPIO wake and reboots on wake.
 
 None of these levels have been measured with a meter; they are reasoned from the
 ESP32-S3 datasheet and the M5Unified driver source. See the roadmap.

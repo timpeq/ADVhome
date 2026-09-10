@@ -89,9 +89,7 @@ separate settings: "Deep Sleep" (OFF / LIGHT / DEEP) and "Wake On GO Only".
       event held INT low and woke the device the instant it slept.
 - [x] Count held keys as activity, so holding an arrow to scroll a long list no
       longer lets the screen dim mid-gesture.
-- [ ] **Test DEEP.** Only LIGHT has been exercised. DEEP takes the `ext1` path
-      and reboots on wake, and a wrong wake mask there means only a power cycle
-      recovers the device. Test with `Wake On GO Only` both ways.
+- [x] Test DEEP. Confirmed working on a Cardputer ADV, 2026-09-09.
 - [ ] **Measure it.** None of the above has been verified with a meter, only
       reasoned from the datasheets and the driver source. Get a USB power meter
       or an inline shunt and record actual draw at each level: NORMAL, DIM,
