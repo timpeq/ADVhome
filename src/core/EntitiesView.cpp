@@ -72,11 +72,18 @@ void EntitiesView::refreshCache() {
         }
     }
 
-    std::sort(_list.items.begin(), _list.items.end(), [](const Entity* a, const Entity* b) {
-        int cmp = strcasecmp(a->friendlyName.c_str(), b->friendlyName.c_str());
-        if (cmp == 0) return a->friendlyName < b->friendlyName;
-        return cmp < 0;
-    });
+    // Every other sub-tab is alphabetical, but Favorites has a user-defined
+    // order. Sorting it here overrode the Favorites Sort setting and made
+    // reordering invisible, since the stored order was re-sorted on every
+    // rebuild.
+    bool alphabetical = (domain != "Favorites") || _config.getFavoritesSort() == 1;
+    if (alphabetical) {
+        std::sort(_list.items.begin(), _list.items.end(), [](const Entity* a, const Entity* b) {
+            int cmp = strcasecmp(a->friendlyName.c_str(), b->friendlyName.c_str());
+            if (cmp == 0) return a->friendlyName < b->friendlyName;
+            return cmp < 0;
+        });
+    }
 
     _list.clampSelection();
 }

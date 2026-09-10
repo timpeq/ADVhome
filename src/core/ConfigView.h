@@ -14,6 +14,7 @@ public:
     ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, HomeAssistantManager& haManager, std::function<void()> onSettingsChanged = nullptr);
     
     void onEnter() override;
+    void onExit() override;
     void draw(DisplayManager& display) override;
     bool handleInput(KeyboardManager& keyboard) override;
 
@@ -50,6 +51,8 @@ private:
     int _softSleepTO;
     int _deepSleepTO;
     bool _escDeepSleep;
+    int _deepSleepMode;
+    bool _wakeGoOnly;
     bool _ttsEnabled;
     int _ttsVolume;
     bool _ttsDebug;

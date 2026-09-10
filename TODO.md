@@ -76,6 +76,48 @@ network is never stranded. Everything below is deferred.
 - [ ] Add a "Test connection" action that validates a URL and token before
       saving, so a typo does not require a reboot to discover.
 
+## Phase 7: Power
+
+Done: the panel is put into sleep-in rather than only blanked, the ES8311 codec
+is released whenever the screen goes off, the radio drops to `WIFI_PS_MAX_MODEM`
+while the display is off, and sleep depth and wake source are now
+separate settings: "Deep Sleep" (OFF / LIGHT / DEEP) and "Wake On GO Only".
+
+- [x] Give the held-ESC gesture visible feedback; it was silent until the key
+      came up, so there was no way to know when to let go.
+- [x] Drain the TCA8418 event FIFO before arming a wake. The queued release
+      event held INT low and woke the device the instant it slept.
+- [x] Count held keys as activity, so holding an arrow to scroll a long list no
+      longer lets the screen dim mid-gesture.
+- [ ] **Test DEEP.** Only LIGHT has been exercised. DEEP takes the `ext1` path
+      and reboots on wake, and a wrong wake mask there means only a power cycle
+      recovers the device. Test with `Wake On GO Only` both ways.
+- [ ] **Measure it.** None of the above has been verified with a meter, only
+      reasoned from the datasheets and the driver source. Get a USB power meter
+      or an inline shunt and record actual draw at each level: NORMAL, DIM,
+      DISPLAY_OFF, SOFT_SLEEP, light sleep, deep sleep. Without numbers there is
+      no way to know which of these changes actually mattered.
+- [ ] Consider whether `WIFI_PS_MAX_MODEM` delays Home Assistant state pushes
+      enough to be noticeable when the screen comes back on, and whether the
+      websocket survives long idle periods under it.
+- [ ] The IMU is polled for wake-on-movement, but it cannot wake the device from
+      light or deep sleep: no interrupt line is configured, so the CPU is not
+      running to poll it. Either wire up the BMI270 interrupt as a wake source
+      or document that movement only wakes it from DIM and DISPLAY_OFF.
+- [ ] The IMU runs continuously even when the screen is off. Check whether it
+      can be put into low-power mode between polls.
+- [ ] DEEP/ANY on the original (non-ADV) Cardputer latches the keyboard matrix
+      rows low with `gpio_hold_en()` so a press can still pull a column down
+      through deep sleep. That path is untested: it was written from the S3
+      reference, not run on the hardware, which nobody here has.
+- [ ] Deep sleep loses the Home Assistant connection and re-fetches all entity
+      state on wake. Measure how long that takes; if it is slow, the GO-only
+      mode may be worse overall than staying in light sleep.
+- [ ] Consider a timed wake so the device can refresh state periodically without
+      user input (`M5.Power.timerSleep`), if that is ever wanted.
+- [ ] Check whether the TCA8418 keyboard controller can be put into its own
+      low-power mode while the device sleeps.
+
 ## Phase 6: First Public Release
 
 Everything that has to be true before the repository goes public and the M5Stack

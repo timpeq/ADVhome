@@ -196,6 +196,22 @@ void ConfigManager::setGoButtonToChat(bool on) {
     _prefs.putBool("goToChat", on);
 }
 
+int ConfigManager::getDeepSleepMode() {
+    return _prefs.getInt("deepSleepMd", 1);
+}
+
+void ConfigManager::setDeepSleepMode(int mode) {
+    _prefs.putInt("deepSleepMd", mode);
+}
+
+bool ConfigManager::getWakeOnGoOnly() {
+    return _prefs.getBool("wakeGoOnly", false);
+}
+
+void ConfigManager::setWakeOnGoOnly(bool on) {
+    _prefs.putBool("wakeGoOnly", on);
+}
+
 bool ConfigManager::getListToggleEnabled() {
     return _prefs.getBool("listToggle", true);
 }

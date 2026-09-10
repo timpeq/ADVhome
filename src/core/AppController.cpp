@@ -9,6 +9,8 @@
 
 void AppController::begin() {
     _display.begin();
+
+
     _config.begin();
     _wifi.begin();
     
@@ -49,6 +51,15 @@ void AppController::update() {
     checkPowerManagement();
     if (_powerState == PowerState::SOFT_SLEEP) {
         return; // Don't run the rest of the update loop
+    }
+
+    // Freeze the view while the sleep hold is counting. Letting it run means two
+    // pushes per frame -- the view without the overlay, then the overlay -- and
+    // the first of those is visible as a glitch. The canvas keeps the last frame
+    // beneath, so the overlay just redraws over it.
+    if (_escHoldActive) {
+        drawSleepHoldOverlay();
+        return;
     }
     
     switch (_currentState) {
@@ -527,6 +538,10 @@ void AppController::checkPowerManagement() {
         if (_powerState != PowerState::NORMAL) {
             _powerState = PowerState::NORMAL;
             setCpuFrequencyMhz(240);
+            // setBrightness(0) alone leaves the panel controller running; the
+            // deeper states put it into sleep-in, so it has to be woken.
+            M5.Display.wakeup();
+            WiFi.setSleep(WIFI_PS_MIN_MODEM);
             if (!_wifi.isConnected()) {
                 _wifi.connectTo(_ssid, _password);
             }
@@ -540,54 +555,141 @@ void AppController::checkPowerManagement() {
     uint32_t idleTime = (now - _lastActivityTime) / 1000; // in seconds
     
     static uint32_t escHoldStartTime = 0;
+    static bool escHintShown = false;
     bool forceDeepSleep = false;
     
     if (_config.getEscDeepSleep()) {
         if (_keyboard.isEscHeld()) {
-            if (escHoldStartTime == 0) escHoldStartTime = now;
-            else if (now - escHoldStartTime > 1000) forceDeepSleep = true;
+            if (escHoldStartTime == 0) {
+                escHoldStartTime = now;
+                escHintShown = false;
+            } else if (now - escHoldStartTime > 1000) {
+                forceDeepSleep = true;
+            } else if (now - escHoldStartTime > 300) {
+                _escHoldActive = true;
+                _escHoldMs = now - escHoldStartTime;
+                escHintShown = true;
+            }
         } else {
+            if (escHintShown) _redraw = true;  // repaint over an abandoned hold
             escHoldStartTime = 0;
+            escHintShown = false;
+            _escHoldActive = false;
         }
     }
     
-    if (forceDeepSleep || idleTime >= (uint32_t)_config.getDeepSleepTimeout()) {
-        // Wait for all keys to be released before sleeping to prevent immediate wakeup
+    bool autoSleep = _config.getDeepSleepMode() != 0 &&
+                     idleTime >= (uint32_t)_config.getDeepSleepTimeout();
+    
+    if (forceDeepSleep || autoSleep) {
+        escHintShown = false;
+
+        // Wait for all keys to be released before sleeping to prevent immediate
+        // wakeup, keeping the same overlay on screen and switching it to its
+        // completed state rather than swapping in another full-screen message.
+        if (forceDeepSleep) {
+            _escHoldActive = true;
+            _escHoldMs = 1000;
+        }
         while (M5Cardputer.Keyboard.isPressed()) {
             M5Cardputer.update();
+            if (forceDeepSleep) drawSleepHoldOverlay();
             delay(10);
+        }
+        _escHoldActive = false;
+
+        // Releasing the key is not enough on the ADV. The TCA8418 holds its INT
+        // line low until its event FIFO is empty, and the reader drains exactly
+        // one event per update(), only clearing INT_STAT once nothing is left.
+        // The release event is therefore still queued here, so arming a
+        // level-triggered wake on GPIO11 would fire on an already-low pin and
+        // wake the device immediately. Drain until the line actually rises.
+        if (M5.getBoard() == m5::board_t::board_M5CardputerADV) {
+            uint32_t drainStart = millis();
+            while (digitalRead(11) == LOW && millis() - drainStart < 500) {
+                M5Cardputer.update();
+                delay(5);
+            }
         }
 
         // Deep sleep - CPU halts until keypress
         WiFi.disconnect(true);
-        M5.Display.setBrightness(0);
+        releaseAudio();
+        M5.Display.sleep();
         delay(100);
 
+        const bool isAdv = (M5.getBoard() == m5::board_t::board_M5CardputerADV);
+        // "Deep Sleep" chooses the depth, "Wake On GO Only" the wake source.
+        // Off still honours a held ESC, as a light sleep, so the manual gesture
+        // never becomes a no-op.
+        int mode = _config.getDeepSleepMode();
+        if (mode == 0) mode = 1;
+        const bool keyboardWakes = !_config.getWakeOnGoOnly();
+
+        // GO is GPIO0, active low, and RTC-capable, so it is a valid wake source
+        // at either sleep depth.
+        uint64_t wakeMask = (1ULL << 0);
+
+        const int input_list[] = {13, 15, 3, 4, 5, 6, 7};
+        const int output_list[] = {8, 9, 11};
+
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
-        if (M5.getBoard() == m5::board_t::board_M5CardputerADV) {
-            // Setup Cardputer ADV wakeup (TCA8418 INT pin)
-            pinMode(11, INPUT_PULLUP);
-            gpio_wakeup_enable((gpio_num_t)11, GPIO_INTR_LOW_LEVEL);
-        } else {
-            // Setup standard Cardputer matrix wakeup
-            const int input_list[] = {13, 15, 3, 4, 5, 6, 7};
-            const int output_list[] = {8, 9, 11};
-            for (int i = 0; i < 3; i++) {
-                pinMode(output_list[i], OUTPUT);
-                digitalWrite(output_list[i], LOW);
-            }
-            for (int i = 0; i < 7; i++) {
-                pinMode(input_list[i], INPUT_PULLUP);
-                gpio_wakeup_enable((gpio_num_t)input_list[i], GPIO_INTR_LOW_LEVEL);
+        if (keyboardWakes) {
+            if (isAdv) {
+                // The ADV's TCA8418 raises one interrupt line for any key.
+                pinMode(11, INPUT_PULLUP);
+                gpio_wakeup_enable((gpio_num_t)11, GPIO_INTR_LOW_LEVEL);
+                wakeMask |= (1ULL << 11);
+            } else {
+                // The original Cardputer is a matrix: hold the rows low so a
+                // press pulls a column down.
+                for (int i = 0; i < 3; i++) {
+                    pinMode(output_list[i], OUTPUT);
+                    digitalWrite(output_list[i], LOW);
+                }
+                for (int i = 0; i < 7; i++) {
+                    pinMode(input_list[i], INPUT_PULLUP);
+                    gpio_wakeup_enable((gpio_num_t)input_list[i], GPIO_INTR_LOW_LEVEL);
+                    wakeMask |= (1ULL << input_list[i]);
+                }
             }
         }
+#endif
+
+        if (mode == 2) {
+            // True deep sleep: the digital core powers down and the chip resets
+            // on wake, so this costs a full boot and Home Assistant reconnect.
+            // Every pin used here is within GPIO0-21 and therefore RTC-capable,
+            // which is what ext1 requires.
+            while (M5Cardputer.BtnA.isPressed()) {
+                M5Cardputer.update();
+                delay(10);
+            }
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+            if (keyboardWakes && !isAdv) {
+                // Matrix rows are driven by the digital core, which is about to
+                // lose power. Latch them low for the duration of the sleep.
+                for (int i = 0; i < 3; i++) {
+                    gpio_hold_en((gpio_num_t)output_list[i]);
+                }
+                gpio_deep_sleep_hold_en();
+            }
+            esp_sleep_enable_ext1_wakeup(wakeMask, ESP_EXT1_WAKEUP_ANY_LOW);
+#endif
+            esp_deep_sleep_start();
+            // Never returns; the device reboots into setup().
+        }
+
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
         esp_sleep_enable_gpio_wakeup();
 #endif
 
         M5.Power.lightSleep(M5.Power.sleep_no_timer, true); // true = wake from wakeup pin
+
         // On wake:
         _lastActivityTime = millis();
         _powerState = PowerState::NORMAL;
+        M5.Display.wakeup();
         M5.Display.setBrightness(_config.getDisplayBrightness());
         _wifi.connectTo(_ssid, _password);
         return;
@@ -595,7 +697,8 @@ void AppController::checkPowerManagement() {
     
     if (_powerState != PowerState::SOFT_SLEEP && idleTime >= (uint32_t)_config.getSoftSleepTimeout()) {
         _powerState = PowerState::SOFT_SLEEP;
-        M5.Display.setBrightness(0);
+        M5.Display.sleep();
+        releaseAudio();
         WiFi.disconnect(true); // Drop connection
         setCpuFrequencyMhz(80); // Save power
         return;
@@ -603,7 +706,11 @@ void AppController::checkPowerManagement() {
     
     if (_powerState != PowerState::DISPLAY_OFF && _powerState != PowerState::SOFT_SLEEP && idleTime >= (uint32_t)_config.getDisplayOffTimeout()) {
         _powerState = PowerState::DISPLAY_OFF;
-        M5.Display.setBrightness(0);
+        // Nobody is looking, so let the radio doze longer between beacons. The
+        // websocket stays up; state pushes just arrive less promptly.
+        M5.Display.sleep();
+        releaseAudio();
+        WiFi.setSleep(WIFI_PS_MAX_MODEM);
     } else if (_powerState == PowerState::NORMAL && idleTime >= (uint32_t)_config.getDimTimeout()) {
         _powerState = PowerState::DIM;
         M5.Display.setBrightness(10);
@@ -662,4 +769,34 @@ String AppController::recoveryHint() const {
     if (_recoveryArmed == 1) return "ESC again: forget Wi-Fi";
     if (_recoveryArmed == 2) return "H again: clear HA setup";
     return "ESC: Wi-Fi   H: HA setup";
+}
+
+void AppController::releaseAudio() {
+    // The ES8311 stays powered for as long as the speaker task runs, and the
+    // TTS volume preview in Settings can leave it running. Never touch the mic
+    // here: ending it while the speaker runs hangs the shared I2S bus.
+    if (M5.Speaker.isRunning() && M5.Speaker.isPlaying() == 0) {
+        M5.Speaker.end();
+    }
+}
+
+void AppController::drawSleepHoldOverlay() {
+    // A held key produces no edges, so without this the hold is silent until it
+    // takes effect. Drawn as the last thing each frame so the active view's own
+    // repaint cannot land on top of it.
+    auto canvas = _display.getCanvas();
+    canvas->fillRect(30, 45, 180, 45, TFT_BLACK);
+    canvas->drawRect(30, 45, 180, 45, TFT_YELLOW);
+
+    canvas->setTextSize(1);
+    bool ready = _escHoldMs >= 1000;
+    canvas->setTextColor(TFT_YELLOW);
+    canvas->setCursor(ready ? 60 : 42, 56);
+    canvas->print(ready ? "Release to sleep" : "Keep holding to sleep");
+
+    int pct = (int)((_escHoldMs * 100) / 1000);
+    if (pct > 100) pct = 100;
+    canvas->fillRect(42, 72, 156, 6, 0x2124);
+    canvas->fillRect(42, 72, (156 * pct) / 100, 6, TFT_YELLOW);
+    _display.push();
 }

@@ -230,6 +230,42 @@ itself after a few seconds. Because credentials are read only at startup, either
 action clears the relevant keys and restarts the device, which then re-enters
 Wi-Fi selection or the browser setup portal as appropriate.
 
+## Power management
+
+Four timeouts in **Menu > Settings** form a ladder, each handing off to the next
+when the device stays idle:
+
+| Setting | What happens |
+| :--- | :--- |
+| `Dim T/O` | The backlight dims. |
+| `Disp Off T/O` | The panel is put to sleep and the Wi-Fi radio drops to `WIFI_PS_MAX_MODEM`. The connection stays up; state pushes just arrive less promptly. |
+| `Soft Sleep T/O` | Wi-Fi is switched off, the audio codec released and the CPU dropped to 80 MHz. The firmware is still running, so a keypress or moving the device resumes it immediately. |
+| `Deep Sleep T/O` | The device actually sleeps, in the manner chosen by `Deep Sleep`. |
+
+`Deep Sleep` selects the depth of that last step:
+
+- `OFF` — never sleeps automatically; the device stops at Soft Sleep.
+- `LIGHT` — ESP32 light sleep. RAM is retained and execution resumes in place,
+  so the Home Assistant connection and entity cache survive.
+- `DEEP` — true deep sleep. Draws the least, but the chip resets, so waking
+  costs a full boot, Wi-Fi association and Home Assistant reconnect.
+
+`Wake On GO Only` restricts waking to the GO button instead of any key. GO always
+wakes the device regardless.
+
+Holding `ESC` sleeps immediately when `ESC for Sleep` is enabled, at whatever
+depth `Deep Sleep` is set to; when that is `OFF` the held key still performs a
+light sleep, so the gesture is never a no-op. A progress bar appears after about
+300 ms and fills over one second, then reads "Release to sleep", because a held
+key produces no other feedback and the device cannot sleep until every key is
+up.
+
+`LIGHT` has been exercised on a Cardputer ADV; `DEEP` uses a different wake
+mechanism (`ext1` rather than light sleep's GPIO wake) and has not been tested.
+
+None of these levels have been measured with a meter; they are reasoned from the
+ESP32-S3 datasheet and the M5Unified driver source. See the roadmap.
+
 ## Recovering a stranded device
 
 If the saved network has gone away or the Home Assistant URL is wrong, the device

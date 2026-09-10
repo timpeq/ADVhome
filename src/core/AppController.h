@@ -92,6 +92,13 @@ private:
     void updateHAConnecting();
     void updateHAConnected();
     void checkPowerManagement();
+    void releaseAudio();
+    void drawSleepHoldOverlay();
+
+    // Set while ESC is held toward the sleep threshold. The overlay is painted
+    // after the active view, which would otherwise repaint over it.
+    bool _escHoldActive = false;
+    uint32_t _escHoldMs = 0;
 
     // Credentials are re-read only at boot, so every reconfiguration action
     // clears the relevant keys and restarts rather than trying to tear down a

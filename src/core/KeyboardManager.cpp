@@ -176,6 +176,13 @@ bool KeyboardManager::hasActivity() const {
     if (!getNewChars().empty()) {
         return true;
     }
+    // A key that is merely held produces no edges at all, so holding one to
+    // scroll a long list would let the idle timers run as though the device
+    // were untouched.
+    if (isUpHeld() || isDownHeld() || isLeftHeld() || isRightHeld() ||
+        isEnterHeld() || isEscHeld() || isGoHeld() || !_currentStatus.word.empty()) {
+        return true;
+    }
     // Check if any modifiers were pressed (simplistic check by state change)
     if (_currentStatus.ctrl != _lastStatus.ctrl || _currentStatus.shift != _lastStatus.shift ||
         _currentStatus.fn != _lastStatus.fn || _currentStatus.opt != _lastStatus.opt ||

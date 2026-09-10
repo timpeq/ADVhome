@@ -85,6 +85,12 @@ have come from the same two places, so check these first:
   second column too, or it silently never fires. `KeyboardManager`'s
   `charPressed()` / `charHeldNow()` helpers take both forms; use them for any
   new alias rather than a bare `std::find`.
+- The TCA8418 holds its INT line (GPIO11) low until its event FIFO is empty,
+  and the reader drains exactly **one** event per `update()`, clearing
+  `INT_STAT` only when nothing is left. Waiting for `Keyboard.isPressed()` to go
+  false is therefore not enough before arming a level-triggered wake: the release
+  event is still queued, the pin is still low, and the device wakes instantly.
+  Drain until `digitalRead(11)` reads high before sleeping.
 - `getNewChars()` drops `` ` `` and `~`. They are real printable keys, but the
   app treats them as back/escape everywhere, so a text field that appended them
   would insert a character and delete it in the same frame.
@@ -92,6 +98,30 @@ have come from the same two places, so check these first:
 Read the pinned library under `.pio/libdeps/m5stack-stamps3/M5Cardputer/` to
 confirm behaviour rather than reasoning from the key legends on the case; the
 ADV's keyboard is a TCA8418 and does not behave like the original matrix.
+
+**Power and sleep:**
+- The ladder is Dim -> Display Off -> Soft Sleep -> the real sleep, one timeout
+  each, in `AppController::checkPowerManagement()`. Soft Sleep drops Wi-Fi and
+  blanks the screen while still running, so it looks exactly like a failed real
+  sleep from the outside. When debugging sleep, confirm which path ran before
+  concluding anything.
+- `KeyboardManager::hasActivity()` is edge-based by nature. Held keys are handled
+  explicitly; anything new that should count as activity has to be added, or the
+  idle timers will run while the user is mid-gesture.
+- **USB CDC drops when the chip sleeps and the port re-enumerates**, so a serial
+  log cannot span a sleep boundary: any reader holds a stale fd and silently
+  receives nothing. Diagnose sleep on the screen, not the wire.
+- Deep sleep resets the chip, so nothing after `esp_deep_sleep_start()` runs.
+  Report a deep-sleep wake from `begin()` via `esp_sleep_get_wakeup_cause()`.
+- Wake pins must be RTC-capable. On the ESP32-S3 that is GPIO0-21, which covers
+  GO (GPIO0) and the ADV keyboard interrupt (GPIO11).
+
+**Drawing:**
+- `DisplayManager` draws into one canvas and `push()` sends it to the panel. Two
+  pushes in a frame means the first one is visible: an overlay drawn after the
+  active view has already pushed will tear. Either draw the overlay into the same
+  frame before the push, or skip the view's update entirely while the overlay is
+  up, as the sleep-hold overlay does.
 
 **Versioning:**
 - Because Nix overrides `__DATE__` to a deterministic epoch (1980), we use `git_version.py` as a `pre:` script in `platformio.ini` to inject the short git hash into the `ADVHOME_VERSION` macro for version tracking.

@@ -9,6 +9,8 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, Ho
     _settings.push_back({"Soft Sleep T/O", 13});
     _settings.push_back({"Deep Sleep T/O", 14});
     _settings.push_back({"ESC for Sleep", 15});
+    _settings.push_back({"Deep Sleep", 25});
+    _settings.push_back({"Wake On GO Only", 26});
     _settings.push_back({"TTS Playback", 17});
     _settings.push_back({"Voice Pipeline", 18});
     _settings.push_back({"Show Chat Tab", 16});
@@ -45,6 +47,8 @@ void ConfigView::refreshValues() {
     _softSleepTO = _config.getSoftSleepTimeout();
     _deepSleepTO = _config.getDeepSleepTimeout();
     _escDeepSleep = _config.getEscDeepSleep();
+    _deepSleepMode = _config.getDeepSleepMode();
+    _wakeGoOnly = _config.getWakeOnGoOnly();
     _ttsEnabled = _config.getTtsEnabled();
     _ttsVolume = _config.getTtsVolume();
     _ttsDebug = _config.getTtsDebug();
@@ -60,6 +64,15 @@ void ConfigView::onEnter() {
     // a page with no visible highlight, and Up cannot recover from it.
     _selectedIndex = 0;
     _scrollOffset = 0;
+}
+
+void ConfigView::onExit() {
+    // The TTS Volume preview calls M5.Speaker.begin() to play its test tone,
+    // which powers up the ES8311 DAC and leaves it powered. Release it on the
+    // way out, unless something is actually playing through it.
+    if (M5.Speaker.isRunning() && M5.Speaker.isPlaying() == 0) {
+        M5.Speaker.end();
+    }
 }
 
 void ConfigView::draw(DisplayManager& display) {
@@ -101,6 +114,13 @@ void ConfigView::draw(DisplayManager& display) {
         } else if (_settings[i].type == 16) {
             canvas->print(_showChat ? "YES" : "NO");
             canvas->setTextColor(_showChat ? TFT_GREEN : TFT_LIGHTGREY);
+        } else if (_settings[i].type == 25) {
+            canvas->print(_deepSleepMode == 0 ? "OFF"
+                          : _deepSleepMode == 1 ? "LIGHT" : "DEEP");
+            canvas->setTextColor(_deepSleepMode == 0 ? TFT_RED : TFT_GREEN);
+        } else if (_settings[i].type == 26) {
+            canvas->print(_wakeGoOnly ? "YES" : "NO");
+            canvas->setTextColor(_wakeGoOnly ? TFT_GREEN : TFT_LIGHTGREY);
         } else if (_settings[i].type == 23) {
             canvas->print(_listToggle ? "ON" : "OFF");
             canvas->setTextColor(_listToggle ? TFT_GREEN : TFT_RED);
@@ -225,6 +245,12 @@ void ConfigView::toggleCurrent(int direction) {
         _showChat = !_showChat;
         _config.setShowChat(_showChat);
         if (_onSettingsChanged) _onSettingsChanged();
+    } else if (_settings[_selectedIndex].type == 25) {
+        _deepSleepMode = (_deepSleepMode + direction + 3) % 3;
+        _config.setDeepSleepMode(_deepSleepMode);
+    } else if (_settings[_selectedIndex].type == 26) {
+        _wakeGoOnly = !_wakeGoOnly;
+        _config.setWakeOnGoOnly(_wakeGoOnly);
     } else if (_settings[_selectedIndex].type == 23) {
         _listToggle = !_listToggle;
         _config.setListToggleEnabled(_listToggle);

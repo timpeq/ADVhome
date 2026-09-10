@@ -18,6 +18,16 @@ public:
     bool getEscDeepSleep();
     void setEscDeepSleep(bool enable);
 
+    // The deepest automatic level. 0 = off, the device stops at Soft Sleep.
+    // 1 = light sleep, resumes in place. 2 = deep sleep, resets the chip and
+    // costs a reboot and Home Assistant reconnect on wake.
+    int getDeepSleepMode();
+    void setDeepSleepMode(int mode);
+
+    // Restricts wake to the GO button. Ignored while the mode is off.
+    bool getWakeOnGoOnly();
+    void setWakeOnGoOnly(bool on);
+
     void clearWifiConfig();
 
     // Reload cached power-management settings from NVS (call after external prefs changes)
