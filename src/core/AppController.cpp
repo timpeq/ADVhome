@@ -264,9 +264,18 @@ void AppController::updateHAConnected() {
         };
         auto onToggle = [this](String entityId) {
             Entity entity = _entityManager.getEntity(entityId);
-            if (entity.id != "") {
-                _haManager->callService(entity.domain, "toggle", entityId);
+            if (entity.id == "") return;
+            // media_player.toggle powers the player off, which reads as a stop.
+            // A playing or paused player pauses and resumes instead, as ENTER
+            // does in its detail window; anything else still powers on/off.
+            // Explicit pause/play rather than play_pause, so a stale state
+            // cannot make the press do the opposite.
+            String service = "toggle";
+            if (entity.domain == "media_player") {
+                if (entity.state == "playing") service = "media_pause";
+                else if (entity.state == "paused") service = "media_play";
             }
+            _haManager->callService(entity.domain, service, entityId);
         };
         
         auto onAdjust = [this](String entityId, int dir) {
@@ -332,7 +341,11 @@ void AppController::updateHAConnected() {
             _haManager->setHvacMode(entityId, mode);
         };
         
-        _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSeekMedia, onSecureService, onSetClimateTemp, onSetClimateRange, onSetHvacMode);
+        auto onSetBrightness = [this](String entityId, int percent) {
+            _haManager->setLightBrightness(entityId, percent);
+        };
+
+        _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSeekMedia, onSecureService, onSetClimateTemp, onSetClimateRange, onSetHvacMode, onSetBrightness);
         
         _aboutView = new AboutView(_config);
         _helpView = new HelpView(_config);

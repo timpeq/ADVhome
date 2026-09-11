@@ -34,6 +34,26 @@ void readClimateAttributes(JsonVariantConst attrs, ClimateState& climate) {
     }
 }
 
+// Light brightness, and whether the light can dim at all. Home Assistant
+// reports brightness as null while a light is off, which reads back as -1.
+void readLightAttributes(JsonVariantConst attrs, LightState& light) {
+    light.brightness = attrs["brightness"].isNull() ? -1 : (int)attrs["brightness"].as<float>();
+    light.dimmable = false;
+    JsonArrayConst modes = attrs["supported_color_modes"].as<JsonArrayConst>();
+    if (modes.isNull()) {
+        // No colour modes reported (an unavailable light, or an integration
+        // that predates them): trust a reported brightness.
+        light.dimmable = light.brightness >= 0;
+        return;
+    }
+    for (JsonVariantConst mode : modes) {
+        if (strcmp(mode | "", "onoff") != 0) {
+            light.dimmable = true;
+            break;
+        }
+    }
+}
+
 } // namespace
 
 
@@ -143,7 +163,9 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                                     "\"max_temp\":true,"
                                     "\"target_temp_step\":true,"
                                     "\"hvac_action\":true,"
-                                    "\"hvac_modes\":true"
+                                    "\"hvac_modes\":true,"
+                                    "\"brightness\":true,"
+                                    "\"supported_color_modes\":true"
                                 "}"
                             "}"
                         "],"
@@ -200,7 +222,9 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                                         "\"max_temp\":true,"
                                         "\"target_temp_step\":true,"
                                         "\"hvac_action\":true,"
-                                        "\"hvac_modes\":true"
+                                        "\"hvac_modes\":true,"
+                                        "\"brightness\":true,"
+                                        "\"supported_color_modes\":true"
                                     "}"
                                 "}"
                             "}"
@@ -378,6 +402,10 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                             ClimateState climate;
                             readClimateAttributes(stateObj["attributes"], climate);
                             _entityManager.updateClimateAttributes(entity_id, climate);
+                        } else if (entity_id.startsWith("light.")) {
+                            LightState light;
+                            readLightAttributes(stateObj["attributes"], light);
+                            _entityManager.updateLightAttributes(entity_id, light);
                         }
 
                     }
@@ -412,6 +440,10 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                             ClimateState climate;
                             readClimateAttributes(eventData["new_state"]["attributes"], climate);
                             _entityManager.updateClimateAttributes(entity_id, climate);
+                        } else if (entity_id.startsWith("light.")) {
+                            LightState light;
+                            readLightAttributes(eventData["new_state"]["attributes"], light);
+                            _entityManager.updateLightAttributes(entity_id, light);
                         }
 
                 }
@@ -936,6 +968,27 @@ void HomeAssistantManager::seekMedia(const String& entity_id, float position) {
     Serial.println("[HA] Sent media_seek: " + payload);
 }
 
+void HomeAssistantManager::setLightBrightness(const String& entity_id, int percent) {
+    if (!_isConnected || !_isAuthenticated) return;
+
+    // light.turn_on with brightness_pct 0 turns the light off, so the bottom
+    // of the range needs no separate service.
+    JsonDocument doc;
+    doc["id"] = _nextMsgId++;
+    doc["type"] = "call_service";
+    doc["domain"] = "light";
+    doc["service"] = "turn_on";
+    JsonObject target = doc["target"].to<JsonObject>();
+    target["entity_id"] = entity_id;
+    JsonObject data = doc["service_data"].to<JsonObject>();
+    data["brightness_pct"] = constrain(percent, 0, 100);
+
+    String payload;
+    serializeJson(doc, payload);
+    _ws.sendTXT(payload);
+    Serial.println("[HA] Sent light brightness: " + payload);
+}
+
 void HomeAssistantManager::adjustEntity(const String& entity_id, int direction) {
     if (!_isAuthenticated) return;
     
@@ -1087,6 +1140,10 @@ void HomeAssistantManager::fetchInitialStates() {
                                         ClimateState climate;
                                         readClimateAttributes(doc["attributes"], climate);
                                         _entityManager.updateClimateAttributes(entity_id, climate);
+                                    } else if (entity_id.startsWith("light.")) {
+                                        LightState light;
+                                        readLightAttributes(doc["attributes"], light);
+                                        _entityManager.updateLightAttributes(entity_id, light);
                                     }
                                     count++;
                                 }

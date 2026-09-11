@@ -4,6 +4,7 @@ void EntityManager::clear() {
     _entities.clear();
     _mediaStates.clear();
     _climateStates.clear();
+    _lightStates.clear();
 }
 
 bool EntityManager::isSupportedDomain(const String& domain) const {
@@ -68,6 +69,21 @@ void EntityManager::updateClimateAttributes(const String& entity_id, const Clima
     if (_entities.find(entity_id) != _entities.end() && _entities[entity_id].domain == "climate") {
         _climateStates[entity_id] = climate;
     }
+}
+
+void EntityManager::updateLightAttributes(const String& entity_id, const LightState& light) {
+    if (_entities.find(entity_id) != _entities.end() && _entities[entity_id].domain == "light") {
+        _lightStates[entity_id] = light;
+    }
+}
+
+bool EntityManager::getLightState(const String& id, LightState& state) const {
+    auto it = _lightStates.find(id);
+    if (it != _lightStates.end()) {
+        state = it->second;
+        return true;
+    }
+    return false;
 }
 
 Entity EntityManager::getEntity(const String& id) const {

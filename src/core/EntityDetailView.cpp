@@ -15,10 +15,19 @@ constexpr int HINT_Y = 123;
 constexpr uint16_t HINT_COLOR = 0x6B6D;
 // Characters that fit left of the icon column at text size 1.
 constexpr int STATE_MAX_CHARS = 30;
+// While a key is held, the running value goes out at this interval so the
+// device follows the gesture instead of waiting for the key to come up.
+constexpr uint32_t HELD_SEND_MS = 250;
+// Every seek makes the player rebuffer, so a scrub is sent less often.
+constexpr uint32_t HELD_SEEK_SEND_MS = 500;
+// After the final send, echoes of the earlier in-flight sends can still
+// arrive. "The server value moved" is only trusted once they have landed.
+constexpr uint32_t ECHO_SETTLE_MS = 600;
+constexpr int BRIGHTNESS_STEP = 5;
 }
 
-EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, std::function<void(String, float)> onSeekMedia, std::function<void(String, String, String, String)> onSecureService, std::function<void(String, float)> onSetClimateTemp, std::function<void(String, float, float)> onSetClimateRange, std::function<void(String, String)> onSetHvacMode, bool showEntityName)
-    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _onSeekMedia(onSeekMedia), _onSecureService(onSecureService), _onSetClimateTemp(onSetClimateTemp), _onSetClimateRange(onSetClimateRange), _onSetHvacMode(onSetHvacMode), _config(config), _scrollRepeater(config), _seekRepeater(config), _climateRepeater(config), _showEntityName(showEntityName) {}
+EntityDetailView::EntityDetailView(EntityManager& entityManager, ConfigManager& config, std::function<void()> onBack, std::function<void(String, String)> onCallService, std::function<void(String, float)> onSetVolume, std::function<void(String, float)> onSeekMedia, std::function<void(String, String, String, String)> onSecureService, std::function<void(String, float)> onSetClimateTemp, std::function<void(String, float, float)> onSetClimateRange, std::function<void(String, String)> onSetHvacMode, std::function<void(String, int)> onSetBrightness, bool showEntityName)
+    : _entityManager(entityManager), _onBack(onBack), _onCallService(onCallService), _onSetVolume(onSetVolume), _onSeekMedia(onSeekMedia), _onSecureService(onSecureService), _onSetClimateTemp(onSetClimateTemp), _onSetClimateRange(onSetClimateRange), _onSetHvacMode(onSetHvacMode), _onSetBrightness(onSetBrightness), _config(config), _scrollRepeater(config), _seekRepeater(config), _climateRepeater(config), _showEntityName(showEntityName) {}
 
 void EntityDetailView::setEntityId(const String& id) {
     _entityId = id;
@@ -30,6 +39,8 @@ void EntityDetailView::setEntityId(const String& id) {
     _volumePendingSend = false;
     _seekChangedLocally = false;
     _seekPendingSend = false;
+    _brightnessChangedLocally = false;
+    _brightnessPendingSend = false;
 }
 
 void EntityDetailView::draw(DisplayManager& display) {
@@ -201,11 +212,33 @@ void EntityDetailView::draw(DisplayManager& display) {
         canvas->setTextColor(HINT_COLOR);
         canvas->print("ENT:Play +/-:Vol </>:Skip M:Mute");
     } else {
+        LightState light;
+        bool dimmable = entity.domain == "light" &&
+                        _entityManager.getLightState(_entityId, light) && light.dimmable;
+        if (dimmable) {
+            // Cyan while showing our own target, as the media volume does.
+            bool editing = _brightnessChangedLocally;
+            int pct = editing ? _brightnessTarget : light.percent();
+            canvas->setTextSize(1);
+            canvas->setTextColor(TFT_LIGHTGREY);
+            canvas->setCursor(CONTENT_LEFT, 58);
+            canvas->print("Brightness");
+            canvas->setTextSize(2);
+            canvas->setTextColor(editing ? TFT_CYAN : TFT_WHITE);
+            canvas->setCursor(CONTENT_LEFT, 70);
+            canvas->print(String(pct) + "%");
+            canvas->setTextSize(1);
+            canvas->fillRect(CONTENT_LEFT, 90, 180, 5, 0x2124);
+            canvas->fillRect(CONTENT_LEFT, 90, 180 * pct / 100, 5, editing ? TFT_CYAN : TFT_YELLOW);
+        }
+
         // Was floating at y=95 in light grey while media and climate used the
         // window footer; all three now share one line.
         canvas->setCursor(CONTENT_LEFT, HINT_Y);
         canvas->setTextColor(HINT_COLOR);
-        if (entity.domain == "light" || entity.domain == "switch" || entity.domain == "fan" || entity.domain == "input_boolean") {
+        if (dimmable) {
+            canvas->print("ENTER: Toggle  +/-: Brightness");
+        } else if (entity.domain == "light" || entity.domain == "switch" || entity.domain == "fan" || entity.domain == "input_boolean") {
             canvas->print("ENTER: Toggle on/off");
         } else if (entity.domain == "cover") {
             canvas->print("ENTER: Toggle open/close");
@@ -398,6 +431,63 @@ bool EntityDetailView::handleClimateInput(KeyboardManager& keyboard, const Entit
     return handled;
 }
 
+bool EntityDetailView::handleBrightnessInput(KeyboardManager& keyboard, const Entity& entity) {
+    LightState light;
+    if (!_entityManager.getLightState(entity.id, light) || !light.dimmable) return false;
+
+    int dir = 0;
+    for (char ch : keyboard.getNewChars()) {
+        if (ch == '+' || ch == '=') dir += 1;
+        else if (ch == '-' || ch == '_') dir -= 1;
+    }
+    int rep = _scrollRepeater.update(keyboard); // -1 up, 1 down
+    if (rep != 0) dir += (rep < 0 ? 1 : -1);
+
+    uint32_t now = millis();
+    int serverPct = light.percent();
+    bool stepped = false;
+
+    if (dir != 0) {
+        if (!_brightnessChangedLocally) {
+            _brightnessTarget = serverPct;
+            _brightnessBaseline = serverPct;
+        }
+        // Snap onto the step grid in the direction of travel, so 47% moves to
+        // 50 or 45 rather than 52 or 42.
+        int next = dir > 0
+            ? (_brightnessTarget / BRIGHTNESS_STEP + 1) * BRIGHTNESS_STEP
+            : ((_brightnessTarget + BRIGHTNESS_STEP - 1) / BRIGHTNESS_STEP - 1) * BRIGHTNESS_STEP;
+        next = constrain(next, 0, 100);
+        if (next != _brightnessTarget) {
+            _brightnessTarget = next;
+            _brightnessChangedLocally = true;
+            _brightnessPendingSend = true;
+            stepped = true;
+        }
+    }
+
+    // Same throttle and echo handling as the media volume below.
+    bool keysHeld = keyboard.isUpHeld() || keyboard.isDownHeld() ||
+                    keyboard.isPlusHeld() || keyboard.isMinusHeld();
+    if (_brightnessPendingSend) {
+        if (!keysHeld || now - _brightnessSentAt >= HELD_SEND_MS) {
+            if (_onSetBrightness) _onSetBrightness(entity.id, _brightnessTarget);
+            _brightnessPendingSend = false;
+            _brightnessSentAt = now;
+        }
+    } else if (_brightnessChangedLocally && !keysHeld) {
+        // Within 1% counts as agreement: 0-255 does not map evenly onto 0-100.
+        uint32_t sinceSend = now - _brightnessSentAt;
+        bool agrees = abs(serverPct - _brightnessTarget) <= 1;
+        bool moved = serverPct != _brightnessBaseline;
+        if (agrees || (moved && sinceSend > ECHO_SETTLE_MS) || sinceSend > 3000) {
+            _brightnessChangedLocally = false;
+        }
+    }
+
+    return stepped;
+}
+
 bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
     if (_securityModal.isActive()) {
         bool handled = _securityModal.handleInput(keyboard);
@@ -543,25 +633,27 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
             
             _seekChangedLocally = true;
             _seekPendingSend = true;
-            _lastSeekChangeTime = now;
             handled = true;
         }
 
-        // Debounce seek sending
+        // Send the scrub position while Left/Right is still held, at a slower
+        // rate than volume, and once more the moment the key comes up.
+        bool seekKeysHeld = keyboard.isLeftHeld() || keyboard.isRightHeld();
         if (_seekPendingSend) {
-            if (now - _lastSeekChangeTime > 500 ||
-                (!keyboard.isLeftHeld() && !keyboard.isRightHeld() && scrubSeekDir == 0)) {
+            if (!seekKeysHeld || now - _seekSentAt >= HELD_SEEK_SEND_MS) {
                 if (_onSeekMedia) {
                     _onSeekMedia(entity.id, _seekTarget);
                 }
                 _seekPendingSend = false;
                 _seekSentAt = now;
             }
-        } else if (_seekChangedLocally) {
+        } else if (_seekChangedLocally && !seekKeysHeld) {
             // Same reasoning as the climate setpoint: dropping the scrub target
             // at send time let the bar snap back to the pre-seek position for
             // the length of the round trip. Hold it until the reported position
-            // lands near it, allowing for playback drift while we wait.
+            // lands near it, allowing for playback drift while we wait. Not
+            // while the key is still down: the echo of a mid-gesture send would
+            // end the hold, and the next step would rebase on that old position.
             MediaPlayerState msSeek;
             bool landed = _entityManager.getMediaPlayerState(_entityId, msSeek) &&
                           fabsf(msSeek.position - _seekTarget) < 5.0f;
@@ -584,36 +676,46 @@ bool EntityDetailView::handleInput(KeyboardManager& keyboard) {
             _volumeTarget = constrain(_volumeTarget + volumeDelta, 0.0f, 1.0f);
             _volumeChangedLocally = true;
             _volumePendingSend = true;
-            _lastVolumeChangeTime = now;
             handled = true;
         }
 
-        // Debounce volume sending (500ms after last change)
+        // While Up/Down or +/- is held, send the running level every
+        // HELD_SEND_MS so the player follows the gesture, and send the final
+        // level as soon as the key comes up. A gesture's first step goes out
+        // at once, since nothing has been sent for longer than the interval.
+        bool volumeKeysHeld = keyboard.isUpHeld() || keyboard.isDownHeld() ||
+                              keyboard.isPlusHeld() || keyboard.isMinusHeld();
         if (_volumePendingSend) {
-            if (now - _lastVolumeChangeTime > 500 ||
-                (!keyboard.isUpHeld() && !keyboard.isDownHeld() && volumeDelta == 0.0f)) {
+            if (!volumeKeysHeld || now - _volumeSentAt >= HELD_SEND_MS) {
                 if (_onSetVolume) {
                     _onSetVolume(entity.id, _volumeTarget);
                 }
                 _volumePendingSend = false;
                 _volumeSentAt = now;
             }
-        } else if (_volumeChangedLocally) {
+        } else if (_volumeChangedLocally && !volumeKeysHeld) {
             // Hold our own level until Home Assistant echoes one back. Accept any
             // movement away from where the level started, not just an exact
             // match: players that quantize volume land near the request, so
-            // waiting for equality would stall until the timeout.
+            // waiting for equality would stall until the timeout. Mid-gesture
+            // sends echo too, so movement only counts once those have had
+            // ECHO_SETTLE_MS to land after the final send.
             MediaPlayerState msVol;
+            uint32_t sinceSend = now - _volumeSentAt;
             if (_entityManager.getMediaPlayerState(_entityId, msVol)) {
                 bool agrees = fabsf(msVol.volumeLevel - _volumeTarget) < 0.02f;
                 bool moved = fabsf(msVol.volumeLevel - _volumeBaseline) > 0.001f;
-                if (agrees || moved || now - _volumeSentAt > 3000) {
+                if (agrees || (moved && sinceSend > ECHO_SETTLE_MS) || sinceSend > 3000) {
                     _volumeChangedLocally = false;
                 }
-            } else if (now - _volumeSentAt > 3000) {
+            } else if (sinceSend > 3000) {
                 _volumeChangedLocally = false;
             }
         }
+    }
+
+    if (entity.domain == "light" && handleBrightnessInput(keyboard, entity)) {
+        handled = true;
     }
 
     // Handle generic enter actions

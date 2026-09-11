@@ -1,5 +1,6 @@
 #include "TabController.h"
 #include "Graphics.h"
+#include "Battery.h"
 
 void TabController::addView(View* view, const String& name) {
     _tabs.push_back({view, name, true});
@@ -102,7 +103,7 @@ void TabController::drawTabBar(DisplayManager& display, bool showBattery) {
     }
     
     if (showBattery) {
-        int batLevel = M5.Power.getBatteryLevel();
+        int batLevel = Battery::level();
         canvas->fillRect(200, 0, 40, 16, 0x18E3);
         canvas->setTextColor(TFT_GREEN);
         canvas->setTextSize(1);

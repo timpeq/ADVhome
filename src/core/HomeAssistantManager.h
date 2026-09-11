@@ -40,6 +40,9 @@ public:
     void setMediaVolume(const String& entity_id, float volume);
     void toggleMute(const String& entity_id, bool is_muted);
     void seekMedia(const String& entity_id, float position);
+
+    // Light controls
+    void setLightBrightness(const String& entity_id, int percent);
     
     // Climate controls
     void setClimateTemperature(const String& entity_id, float temp);

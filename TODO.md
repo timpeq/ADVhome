@@ -13,6 +13,33 @@
 - [x] Replace the flat Config tab with a Menu tab holding Settings, Wi-Fi, Home Assistant, and About.
 - [x] Add an on-device About & License page so attribution survives a firmware-only install.
 - [x] Enhance the climate/thermostat widget in the Entity Detail View to cleanly display both the current ambient temperature and the target set temperature.
+- [x] Smooth out the battery display, it's currently very jumpy. It is now
+      sampled once a second, averaged, and only moves past a 1.5% deadband
+      (`Battery.cpp`).
+- [x] Send volume and seek while the key is still held, not only once it lets
+      go. Both are debounced: a send waits for 500 ms with no change, or for the
+      key to come up, and every auto-repeat step resets that timer, so a held
+      Up/Down or Left/Right sends nothing until release. Make it a throttle
+      instead: send the current target at most every ~250 ms during the hold,
+      plus a final send on release. The echo handling has to change with it.
+      `_volumeChangedLocally` clears as soon as HA reports any level that moved
+      off the baseline, and the seek hold clears once the position lands within
+      5 s, so the echo of an intermediate send would drop the local target
+      mid-gesture and the next step would rebase on a stale value. Only accept
+      an echo after the final send.
+- [ ] Show and set brightness in the light detail window. Today it draws only
+      the bulb icon and ENTER toggles. Brightness is never read: the state
+      parser keeps media and climate attributes but drops a light's
+      `brightness` (0-255). The only way to change it is +/- from a list, which
+      sends a blind ±10 `brightness_step_pct` from
+      `HomeAssistantManager::adjustEntity`. Store it in a light state next to
+      `MediaPlayerState` and `ClimateState`, draw it as a percentage bar like
+      the media volume, and map Up/Down to it with the same optimistic-target
+      pattern as volume (see above), sending an absolute `brightness_pct` so the
+      target is authoritative. Hide the bar for on/off-only lights
+      (`supported_color_modes` of `onoff`). Implemented on 2026-09-10 but not
+      yet tried on hardware: the Zigbee coordinator had dropped off Home
+      Assistant, so there were no dimmable lights to test against.
 
 ## Phase 2: Home Dashboard Completion
 - [x] Replace the first `Favs` top-level tab with `Home`.
@@ -66,6 +93,16 @@
 - [x] Move the remaining entity categories into the Entities top-level tab as sub-tabs.
 - [x] Put Favorites first in the Entities sub-tab sequence, then alphabetize domains with `All` second.
 - [ ] Add explicit service capability checks before showing controls for each Home Assistant domain.
+- [ ] Add `input_text` and `todo` to the entity domains. Both are dropped today
+      by `EntityManager::isSupportedDomain`, and each needs a sub-tab in
+      `EntitiesView`'s list. `input_text` is the easy one: show the value, and
+      let ENTER open a text field that calls `input_text.set_value`, capped at
+      the entity's `max` length. `todo` is bigger. The entity's state is only
+      the count of open items, so the detail view has to fetch the items itself
+      (`todo.get_items`, a service call with `return_response`), list them,
+      tick them off with `todo.update_item` and add new ones with
+      `todo.add_item`. Keep the fetched list bounded; the domain filter exists
+      to save RAM.
 - [ ] Add a small widget layout test or rendering fixture for overflow and screen bounds.
 - [x] Add a reset or reconfiguration action for Wi-Fi and Home Assistant credentials.
 - [ ] Add optional authenticated Home Assistant album-art thumbnails using a bounded JPEG cache.

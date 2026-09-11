@@ -1,4 +1,5 @@
 #include "DisplayManager.h"
+#include "Battery.h"
 
 DisplayManager::DisplayManager() : _canvas(&M5Cardputer.Display) {
 }
@@ -138,7 +139,7 @@ void DisplayManager::drawHASetup(const String& ipAddress) {
 }
 
 void DisplayManager::drawBatteryIndicator() {
-    int batteryLevel = M5.Power.getBatteryLevel();
+    int batteryLevel = Battery::level();
     _canvas.fillRect(200, 0, 40, 16, TFT_BLACK);
     _canvas.setTextColor(TFT_GREEN);
     _canvas.setTextSize(1);

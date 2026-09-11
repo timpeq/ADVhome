@@ -74,6 +74,13 @@ String EntityList::secondaryText(const Entity& entity, uint16_t& color) const {
             }
             return Format::temperature(climate.currentTemperature);
         }
+    } else if (entity.domain == "light" && entity.state == "on") {
+        // Show the level rather than "on", so +/- from the list visibly lands.
+        LightState light;
+        if (_entityManager.getLightState(entity.id, light) && light.dimmable && light.brightness > 0) {
+            color = TFT_GREEN;
+            return String(light.percent()) + "%";
+        }
     } else if (entity.domain == "scene") {
         // Scenes store their last-activated timestamp as state; keep it compact.
         color = TFT_CYAN;

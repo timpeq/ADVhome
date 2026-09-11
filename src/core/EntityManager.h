@@ -35,6 +35,20 @@ struct MediaPlayerState {
     bool isVolumeMuted = false;
 };
 
+// Light attributes (only populated for the light domain).
+struct LightState {
+    int brightness = -1;    // 0-255 as Home Assistant reports it; -1 while off or unknown
+    bool dimmable = false;  // supports some colour mode beyond plain on/off
+
+    // The percentage Home Assistant's own UI shows. A lit light at the very
+    // bottom of the range still reads 1%, not 0%.
+    int percent() const {
+        if (brightness <= 0) return 0;
+        int pct = (brightness * 100 + 127) / 255;
+        return pct < 1 ? 1 : pct;
+    }
+};
+
 struct Entity {
     String id;
     String domain;
@@ -49,19 +63,22 @@ public:
     void updateEntity(const String& entity_id, const String& state, const String& friendly_name = "");
     void updateMediaAttributes(const String& entity_id, const String& title, const String& artist, const String& album, float duration, float position, float volume, bool muted);
     void updateClimateAttributes(const String& entity_id, const ClimateState& climate);
-    
+    void updateLightAttributes(const String& entity_id, const LightState& light);
+
     Entity getEntity(const String& id) const;
     const std::map<String, Entity>& getEntitiesMap() const { return _entities; }
     
     bool getMediaPlayerState(const String& id, MediaPlayerState& state) const;
     bool getClimateState(const String& id, ClimateState& state) const;
-    
+    bool getLightState(const String& id, LightState& state) const;
+
     bool isSupportedDomain(const String& domain) const;
 
 private:
     std::map<String, Entity> _entities;
     std::map<String, MediaPlayerState> _mediaStates;
     std::map<String, ClimateState> _climateStates;
+    std::map<String, LightState> _lightStates;
 };
 
 #endif // ENTITY_MANAGER_H

@@ -188,8 +188,11 @@ The full list lives on the device under **Menu > Help & Shortcuts**. In summary:
 - Up / Down, or `;` and `.`: move through lists
 - Left / Right, or `,` and `/`: change the Entities sub-tab (domain)
 - `Enter`: open the selected entity, or run the action in a detail window
-- `Space`: toggle the highlighted entity without opening it
+- `Space`: toggle the highlighted entity without opening it. A playing or paused
+  media player pauses or resumes instead of powering off
 - `+` / `-`: adjust brightness or volume from the list
+- In a detail window, Up / Down or `+` / `-` set a light's brightness or a media
+  player's volume; held, they keep sending as the value moves
 - Typing letters: jump to the first entity whose name starts with what you typed
 - `Ctrl-F`: add or remove the selected entity from Favorites
 - `Ctrl` + Up / Down: carry the highlighted favorite up or down the list
