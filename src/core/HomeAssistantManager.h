@@ -113,7 +113,13 @@ private:
     uint8_t _ttsSniff[16] = {0};
     size_t _ttsSniffLen = 0;
 
+    // Heap low-water marks across one spoken reply, reported when it stops.
+    uint32_t _ttsMinFree = UINT32_MAX;
+    uint32_t _ttsMinBlock = UINT32_MAX;
+    uint32_t _ttsHeapSampleMs = 0;
+
     void webSocketEvent(WStype_t type, uint8_t * payload, size_t length);
+    void logTtsHeap(const char* stage);
     const VoicePipeline* activePipeline() const;
     String plainHttpBase() const;
     String requestWavTtsUrl(const String& text);

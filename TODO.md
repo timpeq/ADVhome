@@ -69,17 +69,16 @@
 - [x] Add experimental push-to-talk microphone capture for Assist conversations using the Cardputer GO button.
 - [x] Verify and implement Assist pipeline audio session/framing over the authenticated WebSocket (high effort, about 2-4 weeks).
 - [x] Decode Assist audio responses and play them through the Cardputer speaker, with text fallback (high effort, about 1-2 weeks after transport).
-- [ ] Let GO barge in on a spoken reply: stop playback and start a new request
-      without waiting for the answer to finish. Two halves, and only the first
-      is small. Stopping is a few lines — `stopVoicePlayback()` already stops
-      the channel, releases the codec and frees the buffers, so a GO press
-      during playback can silence it at once. Starting a new turn is the hard
-      half: TTS tears the WebSocket down to free the TLS buffers and only
-      reconnects from `stopVoicePlayback()`, so `startVoicePipeline()` will fail
-      for as long as the reconnect takes. Needs a pending-record state in
-      `ChatView` that arms on the GO press and starts the microphone once the
-      connection is authenticated again, plus a status line saying why the
-      device is not listening yet.
+- [x] Let GO barge in on a spoken reply. `startVoicePipeline()` already stopped
+      playback on a new request; what defeated it was the WebSocket teardown
+      during TTS, which left no socket to start the next run on. The teardown
+      now happens only over `wss`, where the TLS session and the playback
+      buffers measurably do not fit together. Over plain `ws` the socket stays
+      up and barge-in works end to end. Tested 2026-09-11.
+- [ ] Barge-in over `wss` still only silences the reply: the new request fails
+      until the socket is back. Closing that needs either a pending-record state
+      in `ChatView` (arm on GO, start the mic once re-authenticated) or a smaller
+      TLS footprint. Low priority while plain `ws` is the recommended setup.
 - [ ] "Speaking" outlives the sound by a second or two. The label clears only
       when the HTTP stream is considered finished, which needs the socket closed
       plus a 700 ms grace, AND the speaker idle. Audio can run out well before

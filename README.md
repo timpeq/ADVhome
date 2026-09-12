@@ -179,6 +179,16 @@ http://homeassistant.local:8123
 https://home.example.com
 ```
 
+**Use the plain `http://…:8123` form if you want voice replies.** An HTTPS URL
+works for everything else, but its TLS session costs about 42 KB of RAM, and a
+spoken reply needs about 30 KB of audio buffers on top of the download itself.
+Over HTTPS the firmware has to close the connection for every reply and reopen it
+afterwards, so a reply can't be interrupted with a new question, and state
+changes made while it is talking are missed until they change again. Over HTTP
+the connection stays up, and holding GO cuts a reply off and starts listening
+straight away. Spoken replies are fetched over plain HTTP on port 8123 either way,
+token included, so HTTPS protects less than it appears to.
+
 Create the long-lived access token in Home Assistant from your user profile page. The URL and token are stored in the device's local Preferences storage.
 
 ## Controls
@@ -238,7 +248,8 @@ One detail from building it is worth recording: the Assist pipeline's own TTS
 stage returns MP3, which is not practical to decode in the RAM and flash left on
 this device. ADVhome therefore stops the pipeline at `intent` and calls
 `/api/tts_get_url` itself with `preferred_format=wav`, which `M5.Speaker` can
-play directly.
+play directly. Holding GO during a reply interrupts it and starts a new request,
+as long as the Home Assistant URL is plain HTTP; see First boot for why.
 
 The original estimate, from before any of it was attempted:
 

@@ -520,6 +520,14 @@ bool HomeAssistantManager::startVoicePipeline() {
     return true;
 }
 
+void HomeAssistantManager::logTtsHeap(const char* stage) {
+    ttsDiag(String("heap ") + stage +
+            " free=" + String(ESP.getFreeHeap() / 1024) +
+            "K blk=" + String(ESP.getMaxAllocHeap() / 1024) +
+            "K min=" + String(ESP.getMinFreeHeap() / 1024) +
+            "K ws=" + (_isAuthenticated ? "up" : "down"));
+}
+
 void HomeAssistantManager::ttsDiag(const String& s) {
     Serial.println("[HA] TTS " + s);
     if (_voiceCallback && _config.getTtsDebug()) _voiceCallback("TTS: " + s);
@@ -659,14 +667,20 @@ void HomeAssistantManager::processVoiceResponse() {
     }
 
     if (_voiceCallback) _voiceCallback("Speaking");
+    logTtsHeap("pre");
 
-    // Free the wss WebSocket's TLS buffers before the HTTP client + PCM buffers;
-    // reconnected in stopVoicePlayback() once playback ends.
-    _ttsTransitioning = true;
-    resetWebSocket();
-    _isConnected = false;
-    _isAuthenticated = false;
-    delay(100);
+    // Over wss the TLS session and the playback buffers do not fit in RAM
+    // together: once the WAV fetch opens there is ~33K left against 30K of PCM
+    // buffers. So the socket is closed for the reply and reopened in
+    // stopVoicePlayback(), which also defeats barge-in, because the next run has
+    // no socket to start on. Plain ws has no TLS to free, so it stays up.
+    if (_config.getHAUrl().startsWith("https")) {
+        _ttsTransitioning = true;
+        resetWebSocket();
+        _isConnected = false;
+        _isAuthenticated = false;
+        delay(100);
+    }
 
     String wavUrl = requestWavTtsUrl(text);
     if (wavUrl.isEmpty() || !startTtsWavStream(wavUrl)) {
@@ -723,6 +737,7 @@ bool HomeAssistantManager::startTtsWavStream(const String& url) {
         return false;
     }
     Serial.printf("[HA] WAV %u Hz, %s\n", _ttsRate, _ttsStereo ? "stereo" : "mono");
+    logTtsHeap("fetched");
 
     // On CardputerADV the mic and speaker share the I2S BCK/WS pins and one
     // ES8311 codec. M5.Mic.end() powers the codec state machine and analog
@@ -746,6 +761,10 @@ bool HomeAssistantManager::startTtsWavStream(const String& url) {
             return false;
         }
     }
+    logTtsHeap("buffers");
+    _ttsMinFree = ESP.getFreeHeap();
+    _ttsMinBlock = ESP.getMaxAllocHeap();
+    _ttsHeapSampleMs = millis();
     _ttsChunkIdx = 0;
     _ttsFillLen = 0;
     _ttsFedBytes = 0;
@@ -815,6 +834,16 @@ void HomeAssistantManager::pumpTtsWavStream() {
         return;
     }
 
+    // Free heap is a counter read; the largest block walks the heap, so sample
+    // that one only a few times a second.
+    uint32_t freeNow = ESP.getFreeHeap();
+    if (freeNow < _ttsMinFree) _ttsMinFree = freeNow;
+    if (millis() - _ttsHeapSampleMs > 250) {
+        _ttsHeapSampleMs = millis();
+        uint32_t block = ESP.getMaxAllocHeap();
+        if (block < _ttsMinBlock) _ttsMinBlock = block;
+    }
+
     WiFiClient* stream = _ttsHttp ? _ttsHttp->getStreamPtr() : nullptr;
 
     // Coalesce whatever bytes are buffered now into the current chunk.
@@ -874,11 +903,18 @@ void HomeAssistantManager::freeTtsResources() {
 }
 
 void HomeAssistantManager::stopVoicePlayback() {
+    if (_ttsMinFree != UINT32_MAX) {
+        ttsDiag("heap play-low free=" + String(_ttsMinFree / 1024) + "K blk=" +
+                String(_ttsMinBlock / 1024) + "K");
+        _ttsMinFree = UINT32_MAX;
+        _ttsMinBlock = UINT32_MAX;
+    }
     M5.Speaker.stop(kTtsChannel);
     // Fully release the codec/I2S so the next mic session (shared pins on
     // CardputerADV) can reconfigure the ES8311 from a clean state.
     M5.Speaker.end();
     freeTtsResources();
+    logTtsHeap("after");
 
     if (!_isConnected) {
         Serial.println("[HA] Resuming Home Assistant WebSocket after TTS");

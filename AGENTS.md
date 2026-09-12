@@ -64,6 +64,13 @@ The device has ~320KB of usable RAM. Home Assistant instances can have thousands
 
 **Audio / I2S Peculiarities:**
 - Calling `M5.Mic.end()` or interfering with the internal microphone while `M5.Speaker` is running can cause the I2S/codec bus to hang and emit a screeching noise. Ensure that `M5.Mic.begin()` is active and avoid arbitrary `end()` calls during interactions.
+- **TTS and a `wss` session do not fit in RAM together.** Measured 2026-09-11
+  with heap logging in the TTS path: over `wss` a spoken reply starts at ~43K
+  free and has ~33K left once the WAV fetch opens, against 30K of PCM buffers,
+  so the socket is torn down for each reply, and that breaks barge-in. Over plain
+  `ws` the device idles at ~97K free (TLS was costing ~42K) and bottoms out
+  around 36K during playback with the socket up. Plain `ws` is the recommended
+  setup; TTS already sends the token over plain HTTP regardless.
 
 **UI Framework (TFT_eSPI):**
 - `AppController` manages the state machine and the `TabController`.
