@@ -332,7 +332,7 @@ has never been run on hardware; see the compatibility notes above. `Wake On GO
 Only` sidesteps it.
 
 None of these levels have been measured with a meter; they are reasoned from the
-ESP32-S3 datasheet and the M5Unified driver source. See the roadmap.
+ESP32-S3 datasheet and the M5Unified driver source. See `TODO.md`.
 
 ## Recovering a stranded device
 

@@ -20,6 +20,24 @@ Use Git to track new features as development progresses.
 - Do not rewrite or discard existing user changes unless explicitly requested.
 - Include relevant documentation and tests in the same feature commit when practical.
 
+## Task list
+
+`TODO.md` is the only task list: one ordered list, most important first.
+
+- Every task has a permanent ID (`T-14`). Positions change when the list is
+  reordered; IDs never change and are never reused. A new task takes the next
+  free ID, noted at the top of the file, and that note moves on by one.
+- Tags say who can finish it: `agent` (the repository and a build are enough),
+  `device` (must be checked on the Cardputer), `tim` (needs Tim: an account, a
+  server, a purchase or a decision). Do not call a `device` task done on a
+  build alone; say what is left to verify on hardware.
+- Finish a task by deleting it from the list in the same commit that completes
+  it, with the ID in the commit subject (`T-14: ...`).
+- New work found while on a task goes to the bottom of the list with the next
+  ID, rather than being done unasked.
+- Retired documents go to `docs/archive/` as `YYYY-MM-DD-name.md`, dated the day
+  they were retired, with a header saying what they were and what replaced them.
+
 ## Validation & Deployment
 
 Before committing a change, run the narrowest relevant checks from the Nix shell. 
