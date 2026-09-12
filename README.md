@@ -155,11 +155,9 @@ That is why the target is resolved by label at flash time. If the `advhom` slot
 is missing entirely, reinstall ADVhome through M5Launcher so it allocates one;
 `deploy` will then find it by name.
 
-`ptable.bin` in the repository is a **historical snapshot** taken at one point in
-time, kept for reference. It is not authoritative and will not match a device
-whose firmware set has changed since. Do not write it back to `0x8000` to
-"repair" a layout: it would point the table at firmwares that are no longer at
-those offsets. Use `ptable` to see what is actually on the device.
+There is no `ptable.bin` checked in: the table changes whenever M5Launcher
+installs or removes a firmware, so a committed copy would go stale immediately.
+Run `ptable` to see what is actually on the device.
 
 ## First boot
 

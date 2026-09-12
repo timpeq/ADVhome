@@ -56,8 +56,9 @@ a hardcoded flash offset, and it refuses to write when the slot is missing or
 the image does not fit. `ptable` prints the connected device's layout.
 
 The partition layout is owned by M5Launcher and changes when firmwares are
-installed or removed; `ptable.bin` in the repo is a dated snapshot, not the
-current truth. Run `ptable` to see the live layout before assuming an offset.
+installed or removed, so there is no `ptable.bin` checked in; a committed copy
+would go stale immediately. Run `ptable` to see the live layout before assuming
+an offset.
 
 **Never flash `firmware_merged.bin` to this device.** It carries a partition
 table generated from `advhome_partitions.csv` (a single app filling the flash);
