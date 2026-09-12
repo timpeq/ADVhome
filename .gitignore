@@ -4,3 +4,4 @@
 *.bin
 *.elf
 logs/
+__pycache__/

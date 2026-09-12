@@ -142,9 +142,9 @@ def main():
             "error: no valid partition table on the device.\n"
             "       The table at 0x8000 is blank or corrupt. M5Launcher owns\n"
             "       this layout -- reinstall through it to rebuild the table.\n"
-            "       ptable.bin in the repo is only a historical snapshot and may\n"
-            "       no longer match this device; writing it back would point the\n"
-            "       table at firmwares that are not where it claims they are.")
+            "       Do not write back an old saved table: it may no longer match\n"
+            "       this device, and would point the table at firmwares that are\n"
+            "       not where it claims they are.")
 
     if args.show:
         print(f"\nPartition table on {args.port}:")

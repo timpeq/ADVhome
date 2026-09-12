@@ -1,9 +1,9 @@
 # Mirrors the real on-device layout's "advhom" (ota_0) app slot so PlatformIO's
 # own overflow check enforces the true 1,572,864-byte (1536K) budget at build
-# time. This device is a shared M5Launcher install (see ptable.bin); the actual
-# partition table already on the device is NOT flashed from this file. `deploy`
-# resolves the slot from the device's own table and writes firmware.bin there
-# via esptool, and never touches the device's partition table.
+# time. This device is a shared M5Launcher install (`ptable` shows its layout);
+# the actual partition table already on the device is NOT flashed from this
+# file. `deploy` resolves the slot from the device's own table and writes
+# firmware.bin there via esptool, and never touches the device's partition table.
 # Only the app0 size below matters for the size check.
 # Name,   Type, SubType, Offset,   Size,    Flags
 nvs,      data, nvs,     0x9000,   0x5000,
