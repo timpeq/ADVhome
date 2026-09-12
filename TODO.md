@@ -33,20 +33,17 @@ archived at [docs/archive/2026-09-12-roadmap.md](docs/archive/2026-09-12-roadmap
     using M5GFX's SDL backend could render exact screenshots instead; not
     started.)
 
-4. **T-05 · Create the GitHub repository and push `master`** `tim`
-    The only remote today is `omen`, Tim's own machine. T-06 points at it.
-
-5. **T-06 · Set up the `peq.me/advhome` redirect** `tim`
+4. **T-06 · Set up the `peq.me/advhome` redirect** `tim`
     On the Caddy server. The About & License page and `THIRD-PARTY-NOTICES.md`
     both point there, and the LGPL-2.1 relink obligation is met by that link
     resolving to the source, so it must exist before any binary is handed out.
-    Needs T-05: `redir /advhome https://github.com/timpeq/advhome permanent`
+    `redir /advhome https://github.com/timpeq/ADVhome permanent`
 
-6. **T-07 · Publish the blog posts** `tim`
+5. **T-07 · Publish the blog posts** `tim`
     The remote-reflex car audio post on peq.me first, then the ADVhome post one
     to two weeks later. Drafts are in `~/code/advhome-blog/posts/`.
 
-7. **T-08 · Try light brightness on a dimmable light** `device`
+6. **T-08 · Try light brightness on a dimmable light** `device`
     Built in `18bc413` but never run against a real dimmable light, because the
     Zigbee coordinator had dropped off Home Assistant. Check that the detail
     window draws brightness as a percentage bar, Up/Down move it and send an
@@ -54,7 +51,7 @@ archived at [docs/archive/2026-09-12-roadmap.md](docs/archive/2026-09-12-roadmap
     echoes, and on/off-only lights (`supported_color_modes` of `onoff`) show no
     bar.
 
-8. **T-09 · Clear "Speaking" when the sound stops, not the stream** `agent` `device`
+7. **T-09 · Clear "Speaking" when the sound stops, not the stream** `agent` `device`
     The label outlives the audio by a second or two. It clears only when the
     HTTP stream counts as finished (socket closed plus a 700 ms grace) and the
     speaker is idle, so it reports the download rather than what the user
@@ -62,26 +59,26 @@ archived at [docs/archive/2026-09-12-roadmap.md](docs/archive/2026-09-12-roadmap
     a short while; keep the existing condition for the teardown itself, which
     does need the stream done. See `HomeAssistantManager::pumpTtsWavStream()`.
 
-9. **T-10 · Surface `P` and `S` in the media player's hint, or drop them** `agent`
+8. **T-10 · Surface `P` and `S` in the media player's hint, or drop them** `agent`
     Play/pause and stop work, but only the Help page mentions them.
 
-10. **T-11 · Check the detail window layout for every domain** `agent` `device`
+9. **T-11 · Check the detail window layout for every domain** `agent` `device`
     With short and long state strings, and with `unavailable`. T-29's rendering
     fixture could do this without the device.
 
-11. **T-12 · Make ESC an escalating back button** `agent`
+10. **T-12 · Make ESC an escalating back button** `agent`
     Close modals, then top of view, then Home, then top of Home, then sleep.
     Today ESC closes modals and a held ESC sleeps if enabled; the steps in
     between do not exist.
 
-12. **T-13 · Navigate from a list's top edge into the tab bar** `agent`
+11. **T-13 · Navigate from a list's top edge into the tab bar** `agent`
     Cursor-based navigation from list boundaries into the top-level tabs.
 
-13. **T-14 · Check service capabilities before showing controls** `agent`
+12. **T-14 · Check service capabilities before showing controls** `agent`
     Per domain, check what the entity supports (for example
     `supported_features`) before offering a control it cannot perform.
 
-14. **T-15 · Add `input_text` and `todo` entities** `agent` `device`
+13. **T-15 · Add `input_text` and `todo` entities** `agent` `device`
     Both are dropped by `EntityManager::isSupportedDomain`, and each needs a
     sub-tab in `EntitiesView`. `input_text` is the easy one: show the value and
     let ENTER open a text field that calls `input_text.set_value`, capped at the
@@ -91,87 +88,87 @@ archived at [docs/archive/2026-09-12-roadmap.md](docs/archive/2026-09-12-roadmap
     `todo.update_item` and adds new ones with `todo.add_item`. Keep the fetched
     list bounded; the domain filter exists to save RAM.
 
-15. **T-16 · Reconfigure without rebooting** `agent`
+14. **T-16 · Reconfigure without rebooting** `agent`
     Clearing credentials restarts the device, because `HomeAssistantManager`
     reads config only in `begin()` and the views hold references to it. Needs a
     teardown and rebuild path, or a manager that can re-read config and
     reconnect in place.
 
-16. **T-17 · Re-open the setup portal on demand** `agent`
+15. **T-17 · Re-open the setup portal on demand** `agent`
     From the Home Assistant page in Settings, instead of only by clearing the
     config and rebooting.
 
-17. **T-18 · Add a "Test connection" action** `agent`
+16. **T-18 · Add a "Test connection" action** `agent`
     Validate a URL and token before saving, so a typo does not take a reboot to
     discover.
 
-18. **T-19 · Store multiple Wi-Fi profiles** `agent`
+17. **T-19 · Store multiple Wi-Fi profiles** `agent`
     `ConfigManager` keeps one SSID and password in NVS. This needs a list, a
     selected index, and a migration for existing single-profile devices.
 
-19. **T-20 · Try the next Wi-Fi profile on failure** `agent`
+18. **T-20 · Try the next Wi-Fi profile on failure** `agent`
     With a bounded number of attempts before falling back to the scan list.
     Needs T-19.
 
-20. **T-21 · Pick the strongest known Wi-Fi at boot** `agent`
+19. **T-21 · Pick the strongest known Wi-Fi at boot** `agent`
     Instead of the last one used. Needs T-19.
 
-21. **T-22 · Edit Wi-Fi credentials on the device** `agent`
+20. **T-22 · Edit Wi-Fi credentials on the device** `agent`
     Rather than only forgetting and re-entering them.
 
-22. **T-23 · Store multiple Home Assistant server profiles** `agent`
+21. **T-23 · Store multiple Home Assistant server profiles** `agent`
     Home and remote URLs, with a way to pick between them. A remote `https`
     profile will not have voice barge-in; see T-36.
 
-23. **T-25 · Extract detail rendering into reusable widgets** `agent`
+22. **T-25 · Extract detail rendering into reusable widgets** `agent`
     Domain-specific detail rendering as widgets, starting with the media player.
 
-24. **T-26 · Add a Home widget registry** `agent`
+23. **T-26 · Add a Home widget registry** `agent`
     So widgets can be enabled and ordered. Needs T-25.
 
-25. **T-27 · Give Home widgets the battery and connection state** `agent`
+24. **T-27 · Give Home widgets the battery and connection state** `agent`
     `HomeWidget` exposes only `draw` and `handleInput` today.
 
-26. **T-28 · Give Home a visual treatment** `tim` `agent`
+25. **T-28 · Give Home a visual treatment** `tim` `agent`
     A small bitmap or an appropriate Home Assistant mark. Tim picks the look.
 
-27. **T-29 · Add a layout test or rendering fixture** `agent`
+26. **T-29 · Add a layout test or rendering fixture** `agent`
     For overflow and screen bounds in widgets and views. Would also cover T-11.
 
-28. **T-30 · Album-art thumbnails** `agent` `device`
+27. **T-30 · Album-art thumbnails** `agent` `device`
     Optional and authenticated, through a bounded JPEG cache. Mind the RAM
     ceiling in AGENTS.md.
 
-29. **T-31 · Measure power draw** `tim` `device`
+28. **T-31 · Measure power draw** `tim` `device`
     None of the power work has been checked with a meter, only reasoned from
     datasheets and driver source. Record actual draw at NORMAL, DIM,
     DISPLAY_OFF, SOFT_SLEEP, light sleep and deep sleep; without numbers there
     is no way to know which changes mattered. Needs a USB power meter or an
     inline shunt.
 
-30. **T-32 · Measure the reconnect after deep sleep** `device`
+29. **T-32 · Measure the reconnect after deep sleep** `device`
     Deep sleep loses the Home Assistant connection and re-fetches all entity
     state on wake. If that is slow, GO-only wake may be worse overall than
     staying in light sleep.
 
-31. **T-33 · Check what `WIFI_PS_MAX_MODEM` costs** `device`
+30. **T-33 · Check what `WIFI_PS_MAX_MODEM` costs** `device`
     Whether it delays state pushes enough to notice when the screen comes back
     on, and whether the WebSocket survives long idle periods under it.
 
-32. **T-34 · Put the IMU in low-power mode between polls** `agent` `device`
+31. **T-34 · Put the IMU in low-power mode between polls** `agent` `device`
     It runs continuously, even with the screen off.
 
-33. **T-35 · Put the TCA8418 in low-power mode while asleep** `agent` `device`
+32. **T-35 · Put the TCA8418 in low-power mode while asleep** `agent` `device`
     If the keyboard controller supports it.
 
-34. **T-36 · Barge-in over `wss`** `agent` `device`
+33. **T-36 · Barge-in over `wss`** `agent` `device`
     Over `wss` a spoken reply still tears the socket down, so holding GO
     silences the reply but the new request fails until the connection is back.
     Needs a pending-record state in `ChatView` (arm on GO, start the mic once
     re-authenticated) or a smaller TLS footprint. Low priority while plain `ws`
     is the recommended setup.
 
-35. **T-37 · Timed wake, if it is ever wanted** `tim`
+34. **T-37 · Timed wake, if it is ever wanted** `tim`
     Refresh state periodically without user input (`M5.Power.timerSleep`).
     Decide whether it is wanted before building it.
 
