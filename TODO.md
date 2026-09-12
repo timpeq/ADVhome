@@ -123,59 +123,55 @@ archived at [docs/archive/2026-09-12-roadmap.md](docs/archive/2026-09-12-roadmap
     Home and remote URLs, with a way to pick between them. A remote `https`
     profile will not have voice barge-in; see T-36.
 
-23. **T-24 · Decide whether Favorites stays duplicated in Entities** `tim`
-    Entities > Favorites is the only place the order can be edited, so removing
-    it needs somewhere else to put reordering.
-
-24. **T-25 · Extract detail rendering into reusable widgets** `agent`
+23. **T-25 · Extract detail rendering into reusable widgets** `agent`
     Domain-specific detail rendering as widgets, starting with the media player.
 
-25. **T-26 · Add a Home widget registry** `agent`
+24. **T-26 · Add a Home widget registry** `agent`
     So widgets can be enabled and ordered. Needs T-25.
 
-26. **T-27 · Give Home widgets the battery and connection state** `agent`
+25. **T-27 · Give Home widgets the battery and connection state** `agent`
     `HomeWidget` exposes only `draw` and `handleInput` today.
 
-27. **T-28 · Give Home a visual treatment** `tim` `agent`
+26. **T-28 · Give Home a visual treatment** `tim` `agent`
     A small bitmap or an appropriate Home Assistant mark. Tim picks the look.
 
-28. **T-29 · Add a layout test or rendering fixture** `agent`
+27. **T-29 · Add a layout test or rendering fixture** `agent`
     For overflow and screen bounds in widgets and views. Would also cover T-11.
 
-29. **T-30 · Album-art thumbnails** `agent` `device`
+28. **T-30 · Album-art thumbnails** `agent` `device`
     Optional and authenticated, through a bounded JPEG cache. Mind the RAM
     ceiling in AGENTS.md.
 
-30. **T-31 · Measure power draw** `tim` `device`
+29. **T-31 · Measure power draw** `tim` `device`
     None of the power work has been checked with a meter, only reasoned from
     datasheets and driver source. Record actual draw at NORMAL, DIM,
     DISPLAY_OFF, SOFT_SLEEP, light sleep and deep sleep; without numbers there
     is no way to know which changes mattered. Needs a USB power meter or an
     inline shunt.
 
-31. **T-32 · Measure the reconnect after deep sleep** `device`
+30. **T-32 · Measure the reconnect after deep sleep** `device`
     Deep sleep loses the Home Assistant connection and re-fetches all entity
     state on wake. If that is slow, GO-only wake may be worse overall than
     staying in light sleep.
 
-32. **T-33 · Check what `WIFI_PS_MAX_MODEM` costs** `device`
+31. **T-33 · Check what `WIFI_PS_MAX_MODEM` costs** `device`
     Whether it delays state pushes enough to notice when the screen comes back
     on, and whether the WebSocket survives long idle periods under it.
 
-33. **T-34 · Put the IMU in low-power mode between polls** `agent` `device`
+32. **T-34 · Put the IMU in low-power mode between polls** `agent` `device`
     It runs continuously, even with the screen off.
 
-34. **T-35 · Put the TCA8418 in low-power mode while asleep** `agent` `device`
+33. **T-35 · Put the TCA8418 in low-power mode while asleep** `agent` `device`
     If the keyboard controller supports it.
 
-35. **T-36 · Barge-in over `wss`** `agent` `device`
+34. **T-36 · Barge-in over `wss`** `agent` `device`
     Over `wss` a spoken reply still tears the socket down, so holding GO
     silences the reply but the new request fails until the connection is back.
     Needs a pending-record state in `ChatView` (arm on GO, start the mic once
     re-authenticated) or a smaller TLS footprint. Low priority while plain `ws`
     is the recommended setup.
 
-36. **T-37 · Timed wake, if it is ever wanted** `tim`
+35. **T-37 · Timed wake, if it is ever wanted** `tim`
     Refresh state periodically without user input (`M5.Power.timerSleep`).
     Decide whether it is wanted before building it.
 
