@@ -1,0 +1,89 @@
+name: Bug report
+description: Something on the Cardputer doesn't behave the way it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The README's [Troubleshooting](https://github.com/timpeq/ADVhome#troubleshooting) section covers Wi-Fi and connection problems, so check it first. One bug per issue, please.
+
+  - type: input
+    id: advhome-version
+    attributes:
+      label: ADVhome version
+      description: Shown next to "ADVhome" at the top of the Menu tab, and in Menu > About & License.
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: hardware
+    attributes:
+      label: Cardputer model
+      description: Nobody working on ADVhome owns an original Cardputer, so reports from one are especially welcome.
+      options:
+        - Cardputer ADV
+        - Original Cardputer
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How ADVhome is installed
+      options:
+        - Under M5Launcher, alongside other firmware
+        - Standalone, as the only firmware on the device
+    validations:
+      required: true
+
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant version
+      description: In Home Assistant under Settings > About. ADVhome also shows it under Menu > Settings > Home Assistant.
+      placeholder: "2026.9.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ha-scheme
+    attributes:
+      label: Home Assistant URL scheme
+      description: Only the scheme, not the address. It changes how much memory is free and whether a spoken reply can be interrupted.
+      options:
+        - http://
+        - https://
+    validations:
+      required: true
+
+  - type: input
+    id: domain
+    attributes:
+      label: Entity domain
+      description: The part of the entity ID before the dot. Leave it blank if the bug isn't about a particular entity.
+      placeholder: light, media_player, climate
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what the Cardputer showed, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: ha-shows
+    attributes:
+      label: What Home Assistant shows
+      description: For a bug about an entity, paste its state and attributes from Developer tools > States in Home Assistant so the two can be compared.
+
+  - type: textarea
+    id: serial
+    attributes:
+      label: Serial output
+      description: |
+        The most useful thing to include for a crash or an unexpected reboot. Connect over USB, run `pio device monitor` (or any serial terminal at 115200 baud), reproduce the problem and paste the log. A crash prints `Guru Meditation Error` and a `Backtrace:` line; include both.
+
+        The log never contains your access token, but it does name your Wi-Fi networks and your Home Assistant address, and v0.1.0 also prints the code you enter for an alarm or a lock. Remove anything you'd rather not post.
+      render: text

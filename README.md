@@ -400,6 +400,15 @@ pio device monitor
 
 Serial logs include Wi-Fi and Home Assistant connection status.
 
+### Reporting a bug
+
+Open an issue with the
+[bug report form](https://github.com/timpeq/ADVhome/issues/new?template=bug_report.yml).
+It asks for the ADVhome and Home Assistant versions, which Cardputer you have,
+whether ADVhome runs under M5Launcher, and what the Cardputer showed next to what
+Home Assistant shows. For a crash or an unexpected reboot, the serial output is
+the most useful thing you can attach.
+
 ## License
 
 ADVhome is released under the [MIT License](LICENSE).
