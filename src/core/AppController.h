@@ -90,6 +90,7 @@ private:
     void updateConnected();
     void updateHASetup();
     void updateHAConnecting();
+    void buildViews();
     void updateHAConnected();
     void checkPowerManagement();
     void releaseAudio();
@@ -112,8 +113,12 @@ private:
     uint8_t _recoveryArmed = 0;  // 0 = none, 1 = Wi-Fi, 2 = Home Assistant
     uint32_t _recoveryArmedAt = 0;
     
+    // When the WebSocket was opened; 0 until the state download has finished.
+    uint32_t _haSocketStartedMs = 0;
+
     // Draw handlers
     void drawCurrentState();
+    void drawLoadingHome();
 };
 
 #endif // APP_CONTROLLER_H

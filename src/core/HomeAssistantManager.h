@@ -11,6 +11,7 @@
 
 class HTTPClient;
 class WiFiClient;
+class WiFiClientSecure;
 
 class HomeAssistantManager {
 public:
@@ -31,8 +32,13 @@ public:
     void begin();
     void update();
     
-    void fetchInitialStates();
-    
+    // The state table is downloaded over HTTP before the socket opens and read a
+    // slice at a time, so the screen keeps drawing while it arrives.
+    void startInitialStates();
+    void pumpInitialStates();
+    bool isLoadingInitialStates() const { return _statesPhase == StatesPhase::Loading; }
+    int initialStatesCount() const { return _statesCount; }
+
     void callService(const String& domain, const String& service, const String& entity_id);
     void callSecureService(const String& domain, const String& service, const String& entity_id, const String& code);
     
@@ -117,6 +123,31 @@ private:
     uint32_t _ttsMinFree = UINT32_MAX;
     uint32_t _ttsMinBlock = UINT32_MAX;
     uint32_t _ttsHeapSampleMs = 0;
+
+    // Initial state download, carried across loop iterations by pumpInitialStates().
+    enum class StatesPhase : uint8_t { Idle, Loading, Done };
+    static constexpr uint32_t kStatesPumpMs = 20;       // per loop, so the UI stays live
+    static constexpr uint32_t kStatesTimeoutMs = 60000;
+    StatesPhase _statesPhase = StatesPhase::Idle;
+    HTTPClient* _statesHttp = nullptr;
+    WiFiClient* _statesPlainClient = nullptr;
+    WiFiClientSecure* _statesSecureClient = nullptr;
+    WiFiClient* _statesStream = nullptr;
+    String _statesObj;               // the object being accumulated
+    int _statesBrace = 0;
+    bool _statesInArray = false;
+    bool _statesInString = false;
+    bool _statesEscape = false;
+    bool _statesDecided = false;     // entity_id seen, keep-or-skip settled
+    bool _statesSkipObject = false;  // unsupported domain: track braces, keep no text
+    int _statesCount = 0;
+    uint32_t _statesStartMs = 0;
+    uint32_t _statesDeadline = 0;
+    bool feedInitialStatesByte(char c);
+    void decideInitialStatesObject();
+    void parseInitialStatesObject();
+    void finishInitialStates(const char* why);
+    bool applyEntityState(const String& entity_id, JsonVariantConst stateObj);
 
     void webSocketEvent(WStype_t type, uint8_t * payload, size_t length);
     void logTtsHeap(const char* stage);

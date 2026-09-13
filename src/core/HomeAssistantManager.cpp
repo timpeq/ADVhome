@@ -9,9 +9,9 @@
 namespace {
 
 // Pull the climate attributes we care about out of a state object's
-// "attributes". Shared by the HTTP initial-state chunker and both WebSocket
-// paths, so a thermostat is populated at boot instead of staying empty until
-// Home Assistant happens to push a state_changed for it.
+// "attributes". Used by applyEntityState(), which both the initial download
+// and the WebSocket listener go through, so a thermostat is populated at boot
+// instead of staying empty until Home Assistant pushes a state_changed for it.
 void readClimateAttributes(JsonVariantConst attrs, ClimateState& climate) {
     if (!attrs["current_temperature"].isNull()) climate.currentTemperature = attrs["current_temperature"].as<float>();
     if (!attrs["temperature"].isNull())         climate.targetTemperature  = attrs["temperature"].as<float>();
@@ -372,80 +372,10 @@ void HomeAssistantManager::webSocketEvent(WStype_t type, uint8_t * payload, size
                         if (_voiceCallback && _pendingTtsText.isEmpty()) _voiceCallback("");
                     }
                 }
-                else if (msgType == "result" && doc["id"] == 1 && doc["success"]) {
-                    JsonArray result = doc["result"].as<JsonArray>();
-                    for (JsonObject stateObj : result) {
-                        String entity_id = stateObj["entity_id"].as<String>();
-                        String state = stateObj["state"].as<String>();
-                        String friendly_name = stateObj["attributes"]["friendly_name"] | "";
-                        
-
-                        if (entity_id.startsWith("sensor.")) {
-                            String device_class = stateObj["attributes"]["device_class"] | "";
-                            if (device_class != "temperature" && device_class != "humidity") {
-                                continue;
-                            }
-                        }
-                        
-                        _entityManager.updateEntity(entity_id, state, friendly_name);
-                        
-                        if (entity_id.startsWith("media_player.")) {
-                            _entityManager.updateMediaAttributes(entity_id,
-                                stateObj["attributes"]["media_title"] | "",
-                                stateObj["attributes"]["media_artist"] | "",
-                                stateObj["attributes"]["media_album_name"] | "",
-                                stateObj["attributes"]["media_duration"] | 0.0f,
-                                stateObj["attributes"]["media_position"] | 0.0f,
-                                stateObj["attributes"]["volume_level"] | 0.0f,
-                                stateObj["attributes"]["is_volume_muted"] | false);
-                        } else if (entity_id.startsWith("climate.")) {
-                            ClimateState climate;
-                            readClimateAttributes(stateObj["attributes"], climate);
-                            _entityManager.updateClimateAttributes(entity_id, climate);
-                        } else if (entity_id.startsWith("light.")) {
-                            LightState light;
-                            readLightAttributes(stateObj["attributes"], light);
-                            _entityManager.updateLightAttributes(entity_id, light);
-                        }
-
-                    }
-                    Serial.println("[HA] Initial states loaded.");
-                }
                 else if (msgType == "event" && doc["event"]["event_type"] == "state_changed") {
                     JsonObject eventData = doc["event"]["data"];
                     String entity_id = eventData["entity_id"].as<String>();
-                    String state = eventData["new_state"]["state"].as<String>();
-                    String friendly_name = eventData["new_state"]["attributes"]["friendly_name"] | "";
-                    
-
-                        if (entity_id.startsWith("sensor.")) {
-                            String device_class = eventData["new_state"]["attributes"]["device_class"] | "";
-                            if (device_class != "temperature" && device_class != "humidity") {
-                                return;
-                            }
-                        }
-                        
-                        _entityManager.updateEntity(entity_id, state, friendly_name);
-                        
-                        if (entity_id.startsWith("media_player.")) {
-                            _entityManager.updateMediaAttributes(entity_id,
-                                eventData["new_state"]["attributes"]["media_title"] | "",
-                                eventData["new_state"]["attributes"]["media_artist"] | "",
-                                eventData["new_state"]["attributes"]["media_album_name"] | "",
-                                eventData["new_state"]["attributes"]["media_duration"] | 0.0f,
-                                eventData["new_state"]["attributes"]["media_position"] | 0.0f,
-                                eventData["new_state"]["attributes"]["volume_level"] | 0.0f,
-                                eventData["new_state"]["attributes"]["is_volume_muted"] | false);
-                        } else if (entity_id.startsWith("climate.")) {
-                            ClimateState climate;
-                            readClimateAttributes(eventData["new_state"]["attributes"], climate);
-                            _entityManager.updateClimateAttributes(entity_id, climate);
-                        } else if (entity_id.startsWith("light.")) {
-                            LightState light;
-                            readLightAttributes(eventData["new_state"]["attributes"], light);
-                            _entityManager.updateLightAttributes(entity_id, light);
-                        }
-
+                    applyEntityState(entity_id, eventData["new_state"]);
                 }
             } else {
                 Serial.println("[HA] JSON Parse Failed!");
@@ -1080,127 +1010,188 @@ void HomeAssistantManager::callSecureService(const String& domain, const String&
     _ws.sendTXT(payload);
     Serial.println("[HA] Sent secure call_service: " + payload);
 }
-#include <HTTPClient.h>
-#include <WiFiClientSecure.h>
 
-#include <HTTPClient.h>
-#include <WiFiClientSecure.h>
+// One entity from a state object, whether it came from the initial download or
+// a state_changed event. Returns false when the entity is filtered out.
+bool HomeAssistantManager::applyEntityState(const String& entity_id, JsonVariantConst stateObj) {
+    int dot = entity_id.indexOf('.');
+    if (dot < 0 || !_entityManager.isSupportedDomain(entity_id.substring(0, dot))) return false;
 
-void HomeAssistantManager::fetchInitialStates() {
+    JsonVariantConst attrs = stateObj["attributes"];
+    if (entity_id.startsWith("sensor.")) {
+        String device_class = attrs["device_class"] | "";
+        if (device_class != "temperature" && device_class != "humidity") return false;
+    }
+
+    String state = stateObj["state"].as<String>();
+    String friendly_name = attrs["friendly_name"] | "";
+    _entityManager.updateEntity(entity_id, state, friendly_name);
+
+    if (entity_id.startsWith("media_player.")) {
+        _entityManager.updateMediaAttributes(entity_id,
+            attrs["media_title"] | "",
+            attrs["media_artist"] | "",
+            attrs["media_album_name"] | "",
+            attrs["media_duration"] | 0.0f,
+            attrs["media_position"] | 0.0f,
+            attrs["volume_level"] | 0.0f,
+            attrs["is_volume_muted"] | false);
+    } else if (entity_id.startsWith("climate.")) {
+        ClimateState climate;
+        readClimateAttributes(attrs, climate);
+        _entityManager.updateClimateAttributes(entity_id, climate);
+    } else if (entity_id.startsWith("light.")) {
+        LightState light;
+        readLightAttributes(attrs, light);
+        _entityManager.updateLightAttributes(entity_id, light);
+    }
+    return true;
+}
+
+void HomeAssistantManager::startInitialStates() {
+    if (_statesPhase != StatesPhase::Idle) return;
+
     String url = _config.getHAUrl();
     if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
     url += "/api/states";
-    
-    Serial.println("[HA] Fetching initial states via HTTP Chunking: " + url);
-    
-    HTTPClient http;
-    WiFiClientSecure *secureClient = nullptr;
-    WiFiClient *client = nullptr;
-    
+
+    _statesPhase = StatesPhase::Loading;
+    _statesStartMs = millis();
+    _statesDeadline = _statesStartMs + kStatesTimeoutMs;
+    _statesCount = 0;
+    _statesBrace = 0;
+    _statesInArray = false;
+    _statesInString = false;
+    _statesEscape = false;
+    _statesObj = "";
+    _statesObj.reserve(2048);
+
+    _statesHttp = new HTTPClient();
     if (url.startsWith("https")) {
-        secureClient = new WiFiClientSecure();
-        secureClient->setInsecure();
-        http.begin(*secureClient, url);
+        _statesSecureClient = new WiFiClientSecure();
+        _statesSecureClient->setInsecure();
+        _statesHttp->begin(*_statesSecureClient, url);
     } else {
-        client = new WiFiClient();
-        http.begin(*client, url);
+        _statesPlainClient = new WiFiClient();
+        _statesHttp->begin(*_statesPlainClient, url);
     }
-    
-    http.addHeader("Authorization", "Bearer " + _config.getHAToken());
-    http.addHeader("Content-Type", "application/json");
-    
-    int httpCode = http.GET();
-    if (httpCode == HTTP_CODE_OK) {
-        WiFiClient* stream = http.getStreamPtr();
-        
-        // Skip until '['
-        while (stream->connected() || stream->available()) {
-            if (stream->available() && stream->read() == '[') break;
-            delay(1);
+    _statesHttp->addHeader("Authorization", "Bearer " + _config.getHAToken());
+    _statesHttp->addHeader("Content-Type", "application/json");
+
+    Serial.println("[HA] Fetching initial states: " + url);
+    // Blocks only until the response headers arrive; pumpInitialStates() reads the body.
+    int httpCode = _statesHttp->GET();
+    if (httpCode != HTTP_CODE_OK) {
+        Serial.println("[HA] Initial states GET failed: HTTP " + String(httpCode) + " " +
+                       _statesHttp->errorToString(httpCode));
+        finishInitialStates("HTTP error");
+        return;
+    }
+    _statesStream = _statesHttp->getStreamPtr();
+}
+
+void HomeAssistantManager::pumpInitialStates() {
+    if (_statesPhase != StatesPhase::Loading) return;
+    if (millis() > _statesDeadline) {
+        finishInitialStates("timed out");
+        return;
+    }
+
+    uint32_t budgetEnd = millis() + kStatesPumpMs;
+    uint8_t buf[256];
+    while (millis() < budgetEnd) {
+        int avail = _statesStream->available();
+        if (avail <= 0) {
+            if (!_statesStream->connected()) finishInitialStates("stream closed early");
+            return; // nothing waiting: hand the loop back rather than spin here
         }
-        
-        int braceCount = 0;
-        String objStr = "";
-        objStr.reserve(2048);
-        bool inString = false;
-        bool escape = false;
-        
-        int count = 0;
-        
-        while (stream->connected() || stream->available()) {
-            if (!stream->available()) {
-                delay(1);
-                continue;
-            }
-            
-            char c = stream->read();
-            
-            if (c == ']' && braceCount == 0) break;
-            
-            if (braceCount > 0 || c == '{') {
-                objStr += c;
-                
-                if (c == '"' && !escape) inString = !inString;
-                
-                if (!inString) {
-                    if (c == '{') braceCount++;
-                    else if (c == '}') {
-                        braceCount--;
-                        if (braceCount == 0) {
-                            JsonDocument doc;
-                            if (!deserializeJson(doc, objStr)) {
-                                String entity_id = doc["entity_id"].as<String>();
-                                String state = doc["state"].as<String>();
-                                String friendly_name = doc["attributes"]["friendly_name"] | "";
-                                
-                                bool skip = false;
-                                if (entity_id.startsWith("sensor.")) {
-                                    String device_class = doc["attributes"]["device_class"] | "";
-                                    if (device_class != "temperature" && device_class != "humidity") {
-                                        skip = true;
-                                    }
-                                }
-                                
-                                if (!skip) {
-                                    _entityManager.updateEntity(entity_id, state, friendly_name);
-                                    if (entity_id.startsWith("media_player.")) {
-                                        _entityManager.updateMediaAttributes(entity_id,
-                                            doc["attributes"]["media_title"] | "",
-                                            doc["attributes"]["media_artist"] | "",
-                                            doc["attributes"]["media_album_name"] | "",
-                                            doc["attributes"]["media_duration"] | 0.0f,
-                                            doc["attributes"]["media_position"] | 0.0f,
-                                            doc["attributes"]["volume_level"] | 0.0f,
-                                            doc["attributes"]["is_volume_muted"] | false);
-                                    } else if (entity_id.startsWith("climate.")) {
-                                        ClimateState climate;
-                                        readClimateAttributes(doc["attributes"], climate);
-                                        _entityManager.updateClimateAttributes(entity_id, climate);
-                                    } else if (entity_id.startsWith("light.")) {
-                                        LightState light;
-                                        readLightAttributes(doc["attributes"], light);
-                                        _entityManager.updateLightAttributes(entity_id, light);
-                                    }
-                                    count++;
-                                }
-                            }
-                            objStr = "";
-                        }
-                    }
-                }
-                
-                if (c == '\\' && !escape) escape = true;
-                else escape = false;
+        int n = _statesStream->read(buf, avail < (int)sizeof(buf) ? avail : (int)sizeof(buf));
+        for (int i = 0; i < n; i++) {
+            if (feedInitialStatesByte((char)buf[i])) {
+                finishInitialStates("complete");
+                return;
             }
         }
-        Serial.println("[HA] Loaded " + String(count) + " entities via HTTP chunking.");
-    } else {
-        Serial.println(String("[HA] HTTP GET failed, error: ") + http.errorToString(httpCode).c_str());
     }
-    http.end();
-    
-    if (secureClient) delete secureClient;
-    if (client) delete client;
+}
+
+// Tracks the JSON array one byte at a time. Returns true on the ']' that closes it.
+bool HomeAssistantManager::feedInitialStatesByte(char c) {
+    if (!_statesInArray) {
+        if (c == '[') _statesInArray = true;
+        return false;
+    }
+    if (_statesBrace == 0) {
+        if (c == ']') return true;
+        if (c != '{') return false; // separators between objects
+        _statesObj = "{";
+        _statesBrace = 1;
+        _statesInString = false;
+        _statesEscape = false;
+        _statesDecided = false;
+        _statesSkipObject = false;
+        return false;
+    }
+
+    bool escaped = _statesEscape;
+    _statesEscape = (c == '\\' && !escaped);
+    if (c == '"' && !escaped) _statesInString = !_statesInString;
+    if (!_statesInString) {
+        if (c == '{') _statesBrace++;
+        else if (c == '}') _statesBrace--;
+    }
+    if (!_statesSkipObject) {
+        _statesObj += c;
+        if (!_statesDecided && !_statesInString) decideInitialStatesObject();
+    }
+    if (_statesBrace == 0) {
+        if (!_statesSkipObject) parseInitialStatesObject();
+        _statesObj = "";
+    }
+    return false;
+}
+
+// Settles keep-or-skip as soon as the entity_id value is complete, so an
+// unsupported entity is never accumulated or parsed. Home Assistant writes
+// entity_id first; if it ever does not, the object is simply parsed in full.
+void HomeAssistantManager::decideInitialStatesObject() {
+    int key = _statesObj.indexOf("\"entity_id\"");
+    if (key < 0) {
+        if (_statesObj.length() > 48) _statesDecided = true;
+        return;
+    }
+    int open = _statesObj.indexOf('"', key + 11);
+    if (open < 0) return;
+    int close = _statesObj.indexOf('"', open + 1);
+    if (close < 0) return;
+    _statesDecided = true;
+    String id = _statesObj.substring(open + 1, close);
+    int dot = id.indexOf('.');
+    _statesSkipObject = dot < 0 || !_entityManager.isSupportedDomain(id.substring(0, dot));
+}
+
+void HomeAssistantManager::parseInitialStatesObject() {
+    JsonDocument doc;
+    if (deserializeJson(doc, _statesObj)) return;
+    String entity_id = doc["entity_id"] | "";
+    if (applyEntityState(entity_id, doc.as<JsonVariantConst>())) _statesCount++;
+}
+
+void HomeAssistantManager::finishInitialStates(const char* why) {
+    Serial.printf("[HA] Initial states: %d entities kept, %lu ms (%s)\n",
+                  _statesCount, (unsigned long)(millis() - _statesStartMs), why);
+    if (_statesHttp) {
+        _statesHttp->end();
+        delete _statesHttp;
+        _statesHttp = nullptr;
+    }
+    delete _statesSecureClient;
+    _statesSecureClient = nullptr;
+    delete _statesPlainClient;
+    _statesPlainClient = nullptr;
+    _statesStream = nullptr;
+    _statesObj = String();
+    _statesPhase = StatesPhase::Done;
 }
 
 void HomeAssistantManager::setClimateTemperature(const String& entity_id, float temp) {

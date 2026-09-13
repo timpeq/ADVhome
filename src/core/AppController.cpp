@@ -233,164 +233,179 @@ void AppController::updateHAConnecting() {
 
     if (!_haManager) {
         _haManager = new HomeAssistantManager(_config, _entityManager);
-        _haManager->fetchInitialStates();
+        buildViews();
+        // The whole state table is downloaded before the socket opens: over
+        // https the two TLS sessions would not fit in RAM together.
+        _haManager->startInitialStates();
+    }
+
+    if (_haManager->isLoadingInitialStates()) {
+        _haManager->pumpInitialStates();
+    } else if (_haSocketStartedMs == 0) {
         _haManager->begin();
-    }
-    
-    if (_haManager->isAuthenticated()) {
+        _haSocketStartedMs = millis();
+    } else if (_haManager->isAuthenticated()) {
+        Serial.printf("[App] Home Assistant ready %lu ms after boot\n", (unsigned long)millis());
         _currentState = AppState::HA_CONNECTED;
+        return;
     }
-    
-    static uint32_t lastDot = 0;
-    if (millis() - lastDot > 500) {
-        lastDot = millis();
+
+    // Favorites fill in as entities arrive, so redraw whenever the count moves,
+    // and on a timer so the status keeps ticking while nothing changes.
+    static uint32_t lastTick = 0;
+    static int lastCount = -1;
+    int count = _haManager->initialStatesCount();
+    if (count != lastCount || millis() - lastTick > 400) {
+        lastCount = count;
+        lastTick = millis();
         _redraw = true;
     }
+}
+
+// Everything the tabs need, built as soon as the Home Assistant manager exists
+// so the Home tab can be on screen while the first state download is running.
+void AppController::buildViews() {
+    _diagView = new DiagnosticView(_wifi, *_haManager);
+    
+    auto onSelect = [this](String entityId) {
+        _detailView->setEntityId(entityId);
+        _isDetailViewActive = true;
+        _redraw = true;
+    };
+    auto onToggle = [this](String entityId) {
+        Entity entity = _entityManager.getEntity(entityId);
+        if (entity.id == "") return;
+        // media_player.toggle powers the player off, which reads as a stop.
+        // A playing or paused player pauses and resumes instead, as ENTER
+        // does in its detail window; anything else still powers on/off.
+        // Explicit pause/play rather than play_pause, so a stale state
+        // cannot make the press do the opposite.
+        String service = "toggle";
+        if (entity.domain == "media_player") {
+            if (entity.state == "playing") service = "media_pause";
+            else if (entity.state == "paused") service = "media_play";
+        }
+        _haManager->callService(entity.domain, service, entityId);
+    };
+    
+    auto onAdjust = [this](String entityId, int dir) {
+        _haManager->adjustEntity(entityId, dir);
+        _redraw = true;
+    };
+    
+    _entitiesView = new EntitiesView(_entityManager, _config, onSelect, onToggle, onAdjust);
+    _homeView = new HomeView(_entityManager, _config, onSelect, onToggle, onAdjust);
+    _configView = new ConfigView(_config, *_diagView, *_haManager, [this]() {
+        _tabController.setViewVisible(_chatView, _config.getShowChat());
+        _redraw = true;
+    });
+    _chatView = new ChatView(*_haManager);
+    _haManager->setConversationCallback([this](const String& response) {
+        _chatView->receiveResponse(response);
+        _redraw = true;
+    });
+    _haManager->setVoiceCallback([this](const String& event) {
+        _chatView->receiveVoiceEvent(event);
+        _redraw = true;
+    });
+    _haManager->setPipelinesCallback([this]() {
+        _redraw = true;
+    });
+    
+    auto onBack = [this]() {
+        _isDetailViewActive = false;
+        _redraw = true;
+    };
+    
+    auto onCallService = [this](String domain, String service) {
+        String eId = _detailView->getEntityId();
+        if (service == "volume_mute" && domain == "media_player") {
+            MediaPlayerState ms;
+            if (_entityManager.getMediaPlayerState(eId, ms)) {
+                _haManager->toggleMute(eId, !ms.isVolumeMuted);
+            }
+        } else {
+            _haManager->callService(domain, service, eId);
+        }
+    };
+
+    auto onSetVolume = [this](String entityId, float volume) {
+        _haManager->setMediaVolume(entityId, volume);
+    };
+
+    auto onSecureService = [this](String domain, String service, String entityId, String code) {
+        _haManager->callSecureService(domain, service, entityId, code);
+    };
+    
+    auto onSeekMedia = [this](String entityId, float position) {
+        _haManager->seekMedia(entityId, position);
+    };
+    
+    auto onSetClimateTemp = [this](String entityId, float temp) {
+        _haManager->setClimateTemperature(entityId, temp);
+    };
+    auto onSetClimateRange = [this](String entityId, float low, float high) {
+        _haManager->setClimateTempRange(entityId, low, high);
+    };
+    auto onSetHvacMode = [this](String entityId, String mode) {
+        _haManager->setHvacMode(entityId, mode);
+    };
+    
+    auto onSetBrightness = [this](String entityId, int percent) {
+        _haManager->setLightBrightness(entityId, percent);
+    };
+
+    _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSeekMedia, onSecureService, onSetClimateTemp, onSetClimateRange, onSetHvacMode, onSetBrightness);
+    
+    _aboutView = new AboutView(_config);
+    _helpView = new HelpView(_config);
+
+    _wifiView = new NetworkView(
+        "Wi-Fi", "Forget network and rescan",
+        [this](std::vector<String>& out) {
+            out.push_back("SSID: " + _config.getWifiSSID());
+            out.push_back("IP:   " + _wifi.getIPAddress());
+            out.push_back("RSSI: " + String(WiFi.RSSI()) + " dBm");
+        },
+        [this]() {
+            _config.clearWifiConfig();
+            rebootWithMessage("Forgetting network...");
+        });
+
+    _haView = new NetworkView(
+        "Home Assistant", "Clear server and token",
+        [this](std::vector<String>& out) {
+            out.push_back("URL: " + _config.getHAUrl());
+            out.push_back("Ver: " + _haManager->getVersion());
+            out.push_back("Setup runs again on reboot.");
+        },
+        [this]() {
+            _config.clearHAConfig();
+            rebootWithMessage("Clearing HA setup...");
+        });
+
+    // The connection pages are settings, not a separate destination, so
+    // they sit in the Settings list next to brightness and volume rather
+    // than as their own Menu entries.
+    _configView->setConnectionViews(_wifiView, _haView);
+
+    _menuView = new MenuView(_config, ADVHOME_VERSION);
+    _menuView->addItem("Settings", _configView);
+    _menuView->addItem("Help & Shortcuts", _helpView);
+    _menuView->addItem("About & License", _aboutView);
+
+    _tabController.addView(_homeView, "Home");
+    _tabController.addView(_chatView, "Chat");
+    _tabController.setViewVisible(_chatView, _config.getShowChat());
+    _tabController.addView(_entitiesView, "Entities");
+    _tabController.addView(_menuView, "Menu");
 }
 
 void AppController::updateHAConnected() {
     bool isWifiDisc = !_wifi.isConnected();
     bool isHADisc = !isWifiDisc && (_haManager && !_haManager->isConnected() && !_haManager->isTtsTransitioning());
     bool isDisconnected = isWifiDisc || isHADisc;
-    
-    
-    if (!_diagView) {
-        _diagView = new DiagnosticView(_wifi, *_haManager);
-        
-        auto onSelect = [this](String entityId) {
-            _detailView->setEntityId(entityId);
-            _isDetailViewActive = true;
-            _redraw = true;
-        };
-        auto onToggle = [this](String entityId) {
-            Entity entity = _entityManager.getEntity(entityId);
-            if (entity.id == "") return;
-            // media_player.toggle powers the player off, which reads as a stop.
-            // A playing or paused player pauses and resumes instead, as ENTER
-            // does in its detail window; anything else still powers on/off.
-            // Explicit pause/play rather than play_pause, so a stale state
-            // cannot make the press do the opposite.
-            String service = "toggle";
-            if (entity.domain == "media_player") {
-                if (entity.state == "playing") service = "media_pause";
-                else if (entity.state == "paused") service = "media_play";
-            }
-            _haManager->callService(entity.domain, service, entityId);
-        };
-        
-        auto onAdjust = [this](String entityId, int dir) {
-            _haManager->adjustEntity(entityId, dir);
-            _redraw = true;
-        };
-        
-        _entitiesView = new EntitiesView(_entityManager, _config, onSelect, onToggle, onAdjust);
-        _homeView = new HomeView(_entityManager, _config, onSelect, onToggle, onAdjust);
-        _configView = new ConfigView(_config, *_diagView, *_haManager, [this]() {
-            _tabController.setViewVisible(_chatView, _config.getShowChat());
-            _redraw = true;
-        });
-        _chatView = new ChatView(*_haManager);
-        _haManager->setConversationCallback([this](const String& response) {
-            _chatView->receiveResponse(response);
-            _redraw = true;
-        });
-        _haManager->setVoiceCallback([this](const String& event) {
-            _chatView->receiveVoiceEvent(event);
-            _redraw = true;
-        });
-        _haManager->setPipelinesCallback([this]() {
-            _redraw = true;
-        });
-        
-        auto onBack = [this]() {
-            _isDetailViewActive = false;
-            _redraw = true;
-        };
-        
-        auto onCallService = [this](String domain, String service) {
-            String eId = _detailView->getEntityId();
-            if (service == "volume_mute" && domain == "media_player") {
-                MediaPlayerState ms;
-                if (_entityManager.getMediaPlayerState(eId, ms)) {
-                    _haManager->toggleMute(eId, !ms.isVolumeMuted);
-                }
-            } else {
-                _haManager->callService(domain, service, eId);
-            }
-        };
 
-        auto onSetVolume = [this](String entityId, float volume) {
-            _haManager->setMediaVolume(entityId, volume);
-        };
-
-        auto onSecureService = [this](String domain, String service, String entityId, String code) {
-            _haManager->callSecureService(domain, service, entityId, code);
-        };
-        
-        auto onSeekMedia = [this](String entityId, float position) {
-            _haManager->seekMedia(entityId, position);
-        };
-        
-        auto onSetClimateTemp = [this](String entityId, float temp) {
-            _haManager->setClimateTemperature(entityId, temp);
-        };
-        auto onSetClimateRange = [this](String entityId, float low, float high) {
-            _haManager->setClimateTempRange(entityId, low, high);
-        };
-        auto onSetHvacMode = [this](String entityId, String mode) {
-            _haManager->setHvacMode(entityId, mode);
-        };
-        
-        auto onSetBrightness = [this](String entityId, int percent) {
-            _haManager->setLightBrightness(entityId, percent);
-        };
-
-        _detailView = new EntityDetailView(_entityManager, _config, onBack, onCallService, onSetVolume, onSeekMedia, onSecureService, onSetClimateTemp, onSetClimateRange, onSetHvacMode, onSetBrightness);
-        
-        _aboutView = new AboutView(_config);
-        _helpView = new HelpView(_config);
-
-        _wifiView = new NetworkView(
-            "Wi-Fi", "Forget network and rescan",
-            [this](std::vector<String>& out) {
-                out.push_back("SSID: " + _config.getWifiSSID());
-                out.push_back("IP:   " + _wifi.getIPAddress());
-                out.push_back("RSSI: " + String(WiFi.RSSI()) + " dBm");
-            },
-            [this]() {
-                _config.clearWifiConfig();
-                rebootWithMessage("Forgetting network...");
-            });
-
-        _haView = new NetworkView(
-            "Home Assistant", "Clear server and token",
-            [this](std::vector<String>& out) {
-                out.push_back("URL: " + _config.getHAUrl());
-                out.push_back("Ver: " + _haManager->getVersion());
-                out.push_back("Setup runs again on reboot.");
-            },
-            [this]() {
-                _config.clearHAConfig();
-                rebootWithMessage("Clearing HA setup...");
-            });
-
-        // The connection pages are settings, not a separate destination, so
-        // they sit in the Settings list next to brightness and volume rather
-        // than as their own Menu entries.
-        _configView->setConnectionViews(_wifiView, _haView);
-
-        _menuView = new MenuView(_config, ADVHOME_VERSION);
-        _menuView->addItem("Settings", _configView);
-        _menuView->addItem("Help & Shortcuts", _helpView);
-        _menuView->addItem("About & License", _aboutView);
-
-        _tabController.addView(_homeView, "Home");
-        _tabController.addView(_chatView, "Chat");
-        _tabController.setViewVisible(_chatView, _config.getShowChat());
-        _tabController.addView(_entitiesView, "Entities");
-        _tabController.addView(_menuView, "Menu");
-    }
-    
     bool wasDetailActive = _isDetailViewActive;
 
     // The GO (top) button jumps straight to the Chat tab from anywhere.
@@ -512,26 +527,56 @@ void AppController::drawCurrentState() {
             }
             break;
             
-        case AppState::HA_CONNECTING: {
-            static int hadots = 0;
-            if (_redraw) { 
-                hadots = (hadots + 1) % 4;
-            }
-            String hawaiting = "";
-            for (int i = 0; i < hadots; i++) hawaiting += ".";
-            _display.clear();
-            String line1 = "Connected to " + _config.getWifiSSID();
-            String msg2 = "Connecting to " + _config.getHAUrl() + hawaiting;
-            String line2 = TextScroller::visible(msg2, 32);
-            _display.drawModalMessage("ADVhome", line1, line2, TFT_GREEN, TFT_CYAN,
-                                      recoveryHint());
+        case AppState::HA_CONNECTING:
+            drawLoadingHome();
             break;
-        }
             
         case AppState::HA_CONNECTED:
             // Handled by TabController inside updateHAConnected()
             break;
     }
+}
+
+void AppController::drawLoadingHome() {
+    // The Home tab goes up as soon as the download starts, so favorites appear
+    // one by one instead of behind a modal, and the header line says what the
+    // wait is for. The modal with the recovery keys only comes back once the
+    // socket has been trying for a while, or a recovery key has been armed.
+    //
+    // The frame that leaves CONNECTED redraws before updateHAConnecting() has
+    // run, so there is nothing to show yet.
+    if (!_haManager) return;
+
+    _display.clear();
+    _tabController.drawTabBar(_display, _config.getShowBattery());
+    _tabController.drawActiveView(_display);
+
+    String dots;
+    for (int i = 0; i < (int)((millis() / 400) % 4); i++) dots += ".";
+
+    bool slowSocket = _haSocketStartedMs != 0 && millis() - _haSocketStartedMs > 5000;
+    if (slowSocket || _recoveryArmed != 0) {
+        String line1 = "Connected to " + _config.getWifiSSID();
+        String line2 = TextScroller::visible("Connecting to " + _config.getHAUrl() + dots, 32);
+        _display.drawModalMessage("ADVhome", line1, line2, TFT_GREEN, TFT_CYAN, recoveryHint());
+        return;
+    }
+
+    String status;
+    uint16_t color;
+    if (_haManager->isLoadingInitialStates()) {
+        status = "Loading entities: " + String(_haManager->initialStatesCount());
+        color = TFT_YELLOW;
+    } else {
+        status = "Connecting to HA" + dots;
+        color = TFT_CYAN;
+    }
+    auto canvas = _display.getCanvas();
+    canvas->setTextSize(1);
+    canvas->setTextColor(color);
+    canvas->setCursor(235 - canvas->textWidth(status), 19);
+    canvas->print(status);
+    _display.push();
 }
 
 void AppController::checkPowerManagement() {

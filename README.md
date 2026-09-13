@@ -168,7 +168,9 @@ Run `ptable` to see what is actually on the device.
 5. After connecting, the display shows the Cardputer's local IP address and a QR code.
 6. Open `http://<device-ip>/` from a device on the same network.
 7. Enter the Home Assistant URL and a long-lived access token, then choose **Connect**.
-8. ADVhome connects to Home Assistant and opens the main interface.
+8. The Home tab opens straight away. Favorites fill in as their states arrive,
+   the header counts entities as they load, and the controls go live once the
+   Home Assistant connection is up.
 
 The Home Assistant URL may use either HTTP or HTTPS, for example:
 
