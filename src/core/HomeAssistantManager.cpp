@@ -1008,7 +1008,8 @@ void HomeAssistantManager::callSecureService(const String& domain, const String&
     String payload;
     serializeJson(doc, payload);
     _ws.sendTXT(payload);
-    Serial.println("[HA] Sent secure call_service: " + payload);
+    // Not the payload: it carries the alarm or lock code, and serial logs get pasted into issues.
+    Serial.println("[HA] Sent secure call_service: " + domain + "." + service + " on " + entity_id);
 }
 
 // One entity from a state object, whether it came from the initial download or
