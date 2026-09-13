@@ -3,7 +3,7 @@
 One ordered list, most important first. Reorder freely: position is priority.
 
 - **IDs are permanent.** `T-14` means the same task after any reshuffle, and an
-  ID is never reused. The next free ID is **T-38**.
+  ID is never reused. The next free ID is **T-39**.
 - **Tags say who can finish it.** `agent`: the repository and a build are
   enough. `device`: done means checked on the Cardputer, even if an agent writes
   the code. `tim`: needs Tim, for an account, a server, a purchase or a decision.
@@ -165,6 +165,17 @@ archived at [docs/archive/2026-09-12-roadmap.md](docs/archive/2026-09-12-roadmap
 33. **T-37 · Timed wake, if it is ever wanted** `tim`
     Refresh state periodically without user input (`M5.Power.timerSleep`).
     Decide whether it is wanted before building it.
+
+34. **T-38 · Skip the USB wait on deep-sleep wakes that pass through M5Launcher** `agent` `device`
+    `setup()` skips its 1.5 s CDC re-enumeration wait when
+    `esp_sleep_get_wakeup_cause()` says the chip woke from sleep, but on the
+    shared device every wake runs M5Launcher first, which relaunches ADVhome
+    with a software reset, so the cause reads as a cold boot and the wait
+    stays: five boots on 2026-09-12 all measured ~5.08 s to ready. Set an
+    `RTC_DATA_ATTR` flag before `esp_deep_sleep_start()` (RTC memory survives
+    both the sleep and the launcher's reset), skip the wait when it is set,
+    and clear it. Check the flag is cleared on the paths that do not go
+    through deep sleep.
 
 ## Known limitations
 
