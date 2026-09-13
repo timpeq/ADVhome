@@ -617,15 +617,15 @@ void AppController::checkPowerManagement() {
     
     static uint32_t escHoldStartTime = 0;
     static bool escHintShown = false;
-    bool forceDeepSleep = false;
+    bool forceSleep = false;
     
-    if (_config.getEscDeepSleep()) {
+    if (_config.getEscForSleep()) {
         if (_keyboard.isEscHeld()) {
             if (escHoldStartTime == 0) {
                 escHoldStartTime = now;
                 escHintShown = false;
             } else if (now - escHoldStartTime > 1000) {
-                forceDeepSleep = true;
+                forceSleep = true;
             } else if (now - escHoldStartTime > 300) {
                 _escHoldActive = true;
                 _escHoldMs = now - escHoldStartTime;
@@ -639,22 +639,22 @@ void AppController::checkPowerManagement() {
         }
     }
     
-    bool autoSleep = _config.getDeepSleepMode() != 0 &&
-                     idleTime >= (uint32_t)_config.getDeepSleepTimeout();
+    bool autoSleep = _config.getSleepDepth() != 0 &&
+                     idleTime >= (uint32_t)_config.getSleepTimeout();
     
-    if (forceDeepSleep || autoSleep) {
+    if (forceSleep || autoSleep) {
         escHintShown = false;
 
         // Wait for all keys to be released before sleeping to prevent immediate
         // wakeup, keeping the same overlay on screen and switching it to its
         // completed state rather than swapping in another full-screen message.
-        if (forceDeepSleep) {
+        if (forceSleep) {
             _escHoldActive = true;
             _escHoldMs = 1000;
         }
         while (M5Cardputer.Keyboard.isPressed()) {
             M5Cardputer.update();
-            if (forceDeepSleep) drawSleepHoldOverlay();
+            if (forceSleep) drawSleepHoldOverlay();
             delay(10);
         }
         _escHoldActive = false;
@@ -680,10 +680,10 @@ void AppController::checkPowerManagement() {
         delay(100);
 
         const bool isAdv = (M5.getBoard() == m5::board_t::board_M5CardputerADV);
-        // "Deep Sleep" chooses the depth, "Wake On GO Only" the wake source.
+        // "Sleep Depth" chooses the depth, "Wake On GO Only" the wake source.
         // Off still honours a held ESC, as a light sleep, so the manual gesture
         // never becomes a no-op.
-        int mode = _config.getDeepSleepMode();
+        int mode = _config.getSleepDepth();
         if (mode == 0) mode = 1;
         const bool keyboardWakes = !_config.getWakeOnGoOnly();
 

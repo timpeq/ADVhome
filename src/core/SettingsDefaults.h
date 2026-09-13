@@ -21,18 +21,18 @@ namespace Defaults {
 
 // ---- Display and power -----------------------------------------------------
 // The timeouts are seconds without input before each step of the idle ladder:
-// dim, screen off, soft sleep, then real sleep at the depth Deep Sleep picks.
+// dim, screen off, soft sleep, then sleep at the depth Sleep Depth picks.
 //                                            default    min    max   step
 constexpr IntSetting Brightness        = {      200,     25,   255,    25 };  // backlight, out of 255
 constexpr IntSetting DimTimeout        = {       30,     10,   120,    10 };  // s
 constexpr IntSetting DisplayOffTimeout = {       60,     30,   300,    30 };  // s
 constexpr IntSetting SoftSleepTimeout  = {      120,     60,   600,    30 };  // s
-constexpr IntSetting DeepSleepTimeout  = {     3600,    300,  7200,   300 };  // s
+constexpr IntSetting SleepTimeout      = {      600,    300,  7200,   300 };  // s
 
-constexpr int  DeepSleepMode = 1;       // 0 = OFF (stop at Soft Sleep), 1 = LIGHT (resumes in place),
-                                        // 2 = DEEP (reboots on wake, then reconnects)
-constexpr bool WakeOnGoOnly  = false;   // true: only GO wakes the device; false: any key
-constexpr bool EscForSleep   = false;   // holding ESC sleeps on demand
+constexpr int  SleepDepth   = 1;       // 0 = OFF (stop at Soft Sleep), 1 = LIGHT (resumes in place),
+                                       // 2 = DEEP (reboots on wake, then reconnects)
+constexpr bool WakeOnGoOnly = false;   // true: only GO wakes the device; false: any key
+constexpr bool EscForSleep  = true;    // holding ESC sleeps on demand (light sleep if Sleep Depth is OFF)
 
 // Not a setting: the backlight level Dim drops to, out of 255.
 constexpr int  DimmedBrightness = 10;

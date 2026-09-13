@@ -60,9 +60,9 @@ private:
     int _dimTO;
     int _dispOffTO;
     int _softSleepTO;
-    int _deepSleepTO;
-    bool _escDeepSleep;
-    int _deepSleepMode;
+    int _sleepTO;
+    bool _escForSleep;
+    int _sleepDepth;
     bool _wakeGoOnly;
     bool _ttsEnabled;
     int _ttsVolume;

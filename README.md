@@ -310,9 +310,9 @@ when the device stays idle:
 | `Dim T/O` | The backlight dims. |
 | `Disp Off T/O` | The panel is put to sleep and the Wi-Fi radio drops to `WIFI_PS_MAX_MODEM`. The connection stays up; state pushes just arrive less promptly. |
 | `Soft Sleep T/O` | Wi-Fi is switched off, the audio codec released and the CPU dropped to 80 MHz. The firmware is still running, so a keypress resumes it immediately — as does moving the device, on a Cardputer ADV, which has an IMU. |
-| `Deep Sleep T/O` | The device actually sleeps, in the manner chosen by `Deep Sleep`. |
+| `Sleep T/O` | The device actually sleeps, at the depth chosen by `Sleep Depth`. |
 
-`Deep Sleep` selects the depth of that last step:
+`Sleep Depth` selects the depth of that last step:
 
 - `OFF` — never sleeps automatically; the device stops at Soft Sleep.
 - `LIGHT` — ESP32 light sleep. RAM is retained and execution resumes in place,
@@ -323,8 +323,8 @@ when the device stays idle:
 `Wake On GO Only` restricts waking to the GO button instead of any key. GO always
 wakes the device regardless.
 
-Holding `ESC` sleeps immediately when `ESC for Sleep` is enabled, at whatever
-depth `Deep Sleep` is set to; when that is `OFF` the held key still performs a
+Holding `ESC` sleeps immediately when `ESC for Sleep` is on (the default), at whatever
+depth `Sleep Depth` is set to; when that is `OFF` the held key still performs a
 light sleep, so the gesture is never a no-op. A progress bar appears after about
 300 ms and fills over one second, then reads "Release to sleep", because a held
 key produces no other feedback and the device cannot sleep until every key is

@@ -16,14 +16,14 @@ public:
     String getWifiSSID();
     String getWifiPassword();
     void saveWifiConfig(const String& ssid, const String& password);
-    bool getEscDeepSleep();
-    void setEscDeepSleep(bool enable);
+    bool getEscForSleep();
+    void setEscForSleep(bool enable);
 
     // The deepest automatic level. 0 = off, the device stops at Soft Sleep.
     // 1 = light sleep, resumes in place. 2 = deep sleep, resets the chip and
     // costs a reboot and Home Assistant reconnect on wake.
-    int getDeepSleepMode();
-    void setDeepSleepMode(int mode);
+    int getSleepDepth();
+    void setSleepDepth(int mode);
 
     // Restricts wake to the GO button. Ignored while the mode is off.
     bool getWakeOnGoOnly();
@@ -103,8 +103,8 @@ public:
     int getSoftSleepTimeout();
     void setSoftSleepTimeout(int timeout);
     
-    int getDeepSleepTimeout();
-    void setDeepSleepTimeout(int timeout);
+    int getSleepTimeout();
+    void setSleepTimeout(int timeout);
     
     // Connection Settings
     int getReconnectInterval();
@@ -139,12 +139,12 @@ private:
     // Cached copies of settings read every loop() iteration by checkPowerManagement();
     // avoids hammering NVS (and flooding logs with NOT_FOUND) when keys are unset.
     bool _cacheLoaded = false;
-    bool _escDeepSleep = Defaults::EscForSleep;
+    bool _escForSleep = Defaults::EscForSleep;
     int _brightness = Defaults::Brightness.def;
     int _dimTO = Defaults::DimTimeout.def;
     int _dispOffTO = Defaults::DisplayOffTimeout.def;
     int _softSleepTO = Defaults::SoftSleepTimeout.def;
-    int _deepSleepTO = Defaults::DeepSleepTimeout.def;
+    int _sleepTO = Defaults::SleepTimeout.def;
 };
 
 #endif // CONFIG_MANAGER_H

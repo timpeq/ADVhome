@@ -9,12 +9,12 @@ void ConfigManager::begin() {
 }
 
 void ConfigManager::reloadPowerSettingsCache() {
-    _escDeepSleep = _prefs.getBool("esc_dpsleep", Defaults::EscForSleep);
+    _escForSleep = _prefs.getBool("esc_dpsleep", Defaults::EscForSleep);
     _brightness = _prefs.getInt("brightness", Defaults::Brightness.def);
     _dimTO = _prefs.getInt("dimTO", Defaults::DimTimeout.def);
     _dispOffTO = _prefs.getInt("dispOffTO", Defaults::DisplayOffTimeout.def);
     _softSleepTO = _prefs.getInt("softSleepTO", Defaults::SoftSleepTimeout.def);
-    _deepSleepTO = _prefs.getInt("deepSleepTO", Defaults::DeepSleepTimeout.def);
+    _sleepTO = _prefs.getInt("deepSleepTO", Defaults::SleepTimeout.def);
     _cacheLoaded = true;
 }
 
@@ -35,12 +35,12 @@ void ConfigManager::saveWifiConfig(const String& ssid, const String& password) {
     _prefs.putString("wifi_pass", password);
 }
 
-bool ConfigManager::getEscDeepSleep() {
-    return _escDeepSleep;
+bool ConfigManager::getEscForSleep() {
+    return _escForSleep;
 }
 
-void ConfigManager::setEscDeepSleep(bool enable) {
-    _escDeepSleep = enable;
+void ConfigManager::setEscForSleep(bool enable) {
+    _escForSleep = enable;
     _prefs.putBool("esc_dpsleep", enable);
 }
 
@@ -195,11 +195,13 @@ void ConfigManager::setGoButtonToChat(bool on) {
     _prefs.putBool("goToChat", on);
 }
 
-int ConfigManager::getDeepSleepMode() {
-    return _prefs.getInt("deepSleepMd", Defaults::DeepSleepMode);
+// Sleep Depth, Sleep T/O and ESC for Sleep keep their original NVS keys
+// (deepSleepMd, deepSleepTO, esc_dpsleep) so saved values survive the rename.
+int ConfigManager::getSleepDepth() {
+    return _prefs.getInt("deepSleepMd", Defaults::SleepDepth);
 }
 
-void ConfigManager::setDeepSleepMode(int mode) {
+void ConfigManager::setSleepDepth(int mode) {
     _prefs.putInt("deepSleepMd", mode);
 }
 
@@ -300,12 +302,12 @@ void ConfigManager::setSoftSleepTimeout(int timeout) {
     _prefs.putInt("softSleepTO", timeout);
 }
 
-int ConfigManager::getDeepSleepTimeout() {
-    return _deepSleepTO;
+int ConfigManager::getSleepTimeout() {
+    return _sleepTO;
 }
 
-void ConfigManager::setDeepSleepTimeout(int timeout) {
-    _deepSleepTO = timeout;
+void ConfigManager::setSleepTimeout(int timeout) {
+    _sleepTO = timeout;
     _prefs.putInt("deepSleepTO", timeout);
 }
 

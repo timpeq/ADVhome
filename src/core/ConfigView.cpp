@@ -22,9 +22,9 @@ ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, Ho
     _settings.push_back({"Dim T/O", 11});
     _settings.push_back({"Disp Off T/O", 12});
     _settings.push_back({"Soft Sleep T/O", 13});
-    _settings.push_back({"Deep Sleep T/O", 14});
+    _settings.push_back({"Sleep T/O", 14});
     _settings.push_back({"ESC for Sleep", 15});
-    _settings.push_back({"Deep Sleep", 25});
+    _settings.push_back({"Sleep Depth", 25});
     _settings.push_back({"Wake On GO Only", 26});
     _settings.push_back({"TTS Playback", 17});
     _settings.push_back({"Voice Pipeline", 18});
@@ -60,9 +60,9 @@ void ConfigView::refreshValues() {
     _dimTO = _config.getDimTimeout();
     _dispOffTO = _config.getDisplayOffTimeout();
     _softSleepTO = _config.getSoftSleepTimeout();
-    _deepSleepTO = _config.getDeepSleepTimeout();
-    _escDeepSleep = _config.getEscDeepSleep();
-    _deepSleepMode = _config.getDeepSleepMode();
+    _sleepTO = _config.getSleepTimeout();
+    _escForSleep = _config.getEscForSleep();
+    _sleepDepth = _config.getSleepDepth();
     _wakeGoOnly = _config.getWakeOnGoOnly();
     _ttsEnabled = _config.getTtsEnabled();
     _ttsVolume = _config.getTtsVolume();
@@ -154,9 +154,9 @@ void ConfigView::draw(DisplayManager& display) {
             canvas->print(_showChat ? "YES" : "NO");
             canvas->setTextColor(_showChat ? TFT_GREEN : TFT_LIGHTGREY);
         } else if (_settings[i].type == 25) {
-            canvas->print(_deepSleepMode == 0 ? "OFF"
-                          : _deepSleepMode == 1 ? "LIGHT" : "DEEP");
-            canvas->setTextColor(_deepSleepMode == 0 ? TFT_RED : TFT_GREEN);
+            canvas->print(_sleepDepth == 0 ? "OFF"
+                          : _sleepDepth == 1 ? "LIGHT" : "DEEP");
+            canvas->setTextColor(_sleepDepth == 0 ? TFT_RED : TFT_GREEN);
         } else if (_settings[i].type == 26) {
             canvas->print(_wakeGoOnly ? "YES" : "NO");
             canvas->setTextColor(_wakeGoOnly ? TFT_GREEN : TFT_LIGHTGREY);
@@ -194,11 +194,11 @@ void ConfigView::draw(DisplayManager& display) {
             canvas->print(String(_softSleepTO) + " s");
             canvas->setTextColor(TFT_GREEN);
         } else if (_settings[i].type == 14) {
-            canvas->print(String(_deepSleepTO) + " s");
+            canvas->print(String(_sleepTO) + " s");
             canvas->setTextColor(TFT_PURPLE);
         } else if (_settings[i].type == 15) {
-            canvas->print(_escDeepSleep ? "YES" : "NO");
-            canvas->setTextColor(_escDeepSleep ? TFT_GREEN : TFT_LIGHTGREY);
+            canvas->print(_escForSleep ? "YES" : "NO");
+            canvas->setTextColor(_escForSleep ? TFT_GREEN : TFT_LIGHTGREY);
         } else if (_settings[i].type == 17) {
             canvas->print(_ttsEnabled ? "ON" : "OFF");
             canvas->setTextColor(_ttsEnabled ? TFT_GREEN : TFT_LIGHTGREY);
@@ -266,8 +266,8 @@ void ConfigView::toggleCurrent(int direction) {
         _config.setShowChat(_showChat);
         if (_onSettingsChanged) _onSettingsChanged();
     } else if (_settings[_selectedIndex].type == 25) {
-        _deepSleepMode = (_deepSleepMode + direction + 3) % 3;
-        _config.setDeepSleepMode(_deepSleepMode);
+        _sleepDepth = (_sleepDepth + direction + 3) % 3;
+        _config.setSleepDepth(_sleepDepth);
     } else if (_settings[_selectedIndex].type == 26) {
         _wakeGoOnly = !_wakeGoOnly;
         _config.setWakeOnGoOnly(_wakeGoOnly);
@@ -290,11 +290,11 @@ void ConfigView::toggleCurrent(int direction) {
         _softSleepTO = Defaults::SoftSleepTimeout.adjust(_softSleepTO, direction);
         _config.setSoftSleepTimeout(_softSleepTO);
     } else if (_settings[_selectedIndex].type == 14) {
-        _deepSleepTO = Defaults::DeepSleepTimeout.adjust(_deepSleepTO, direction);
-        _config.setDeepSleepTimeout(_deepSleepTO);
+        _sleepTO = Defaults::SleepTimeout.adjust(_sleepTO, direction);
+        _config.setSleepTimeout(_sleepTO);
     } else if (_settings[_selectedIndex].type == 15) {
-        _escDeepSleep = !_escDeepSleep;
-        _config.setEscDeepSleep(_escDeepSleep);
+        _escForSleep = !_escForSleep;
+        _config.setEscForSleep(_escForSleep);
     } else if (_settings[_selectedIndex].type == 17) {
         _ttsEnabled = !_ttsEnabled;
         _config.setTtsEnabled(_ttsEnabled);
