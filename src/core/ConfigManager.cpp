@@ -9,12 +9,12 @@ void ConfigManager::begin() {
 }
 
 void ConfigManager::reloadPowerSettingsCache() {
-    _escDeepSleep = _prefs.getBool("esc_dpsleep", false);
-    _brightness = _prefs.getInt("brightness", 200);
-    _dimTO = _prefs.getInt("dimTO", 30);
-    _dispOffTO = _prefs.getInt("dispOffTO", 60);
-    _softSleepTO = _prefs.getInt("softSleepTO", 120);
-    _deepSleepTO = _prefs.getInt("deepSleepTO", 3600);
+    _escDeepSleep = _prefs.getBool("esc_dpsleep", Defaults::EscForSleep);
+    _brightness = _prefs.getInt("brightness", Defaults::Brightness.def);
+    _dimTO = _prefs.getInt("dimTO", Defaults::DimTimeout.def);
+    _dispOffTO = _prefs.getInt("dispOffTO", Defaults::DisplayOffTimeout.def);
+    _softSleepTO = _prefs.getInt("softSleepTO", Defaults::SoftSleepTimeout.def);
+    _deepSleepTO = _prefs.getInt("deepSleepTO", Defaults::DeepSleepTimeout.def);
     _cacheLoaded = true;
 }
 
@@ -156,16 +156,15 @@ void ConfigManager::flushPendingFavorites() {
 }
 
 int ConfigManager::getFavoritesSort() {
-    return _prefs.getInt("fav_sort", 0);
+    return _prefs.getInt("fav_sort", Defaults::FavoritesSort);
 }
 
 void ConfigManager::setFavoritesSort(int sort) {
     _prefs.putInt("fav_sort", sort);
 }
 
-// Adding new settings to ConfigManager.cpp
 bool ConfigManager::getShowBattery() {
-    return _prefs.getBool("show_battery", true);
+    return _prefs.getBool("show_battery", Defaults::ShowBatteryInTab);
 }
 
 void ConfigManager::setShowBattery(bool show) {
@@ -173,7 +172,7 @@ void ConfigManager::setShowBattery(bool show) {
 }
 
 bool ConfigManager::getHideUnavailable() {
-    return _prefs.getBool("hideUnavail", false);
+    return _prefs.getBool("hideUnavail", Defaults::HideUnavailable);
 }
 
 void ConfigManager::setHideUnavailable(bool hide) {
@@ -181,7 +180,7 @@ void ConfigManager::setHideUnavailable(bool hide) {
 }
 
 bool ConfigManager::getShowChat() {
-    return _prefs.getBool("show_chat", true);
+    return _prefs.getBool("show_chat", Defaults::ShowChatTab);
 }
 
 void ConfigManager::setShowChat(bool show) {
@@ -189,7 +188,7 @@ void ConfigManager::setShowChat(bool show) {
 }
 
 bool ConfigManager::getGoButtonToChat() {
-    return _prefs.getBool("goToChat", true);
+    return _prefs.getBool("goToChat", Defaults::GoButtonToChat);
 }
 
 void ConfigManager::setGoButtonToChat(bool on) {
@@ -197,7 +196,7 @@ void ConfigManager::setGoButtonToChat(bool on) {
 }
 
 int ConfigManager::getDeepSleepMode() {
-    return _prefs.getInt("deepSleepMd", 1);
+    return _prefs.getInt("deepSleepMd", Defaults::DeepSleepMode);
 }
 
 void ConfigManager::setDeepSleepMode(int mode) {
@@ -205,7 +204,7 @@ void ConfigManager::setDeepSleepMode(int mode) {
 }
 
 bool ConfigManager::getWakeOnGoOnly() {
-    return _prefs.getBool("wakeGoOnly", false);
+    return _prefs.getBool("wakeGoOnly", Defaults::WakeOnGoOnly);
 }
 
 void ConfigManager::setWakeOnGoOnly(bool on) {
@@ -213,7 +212,7 @@ void ConfigManager::setWakeOnGoOnly(bool on) {
 }
 
 bool ConfigManager::getListToggleEnabled() {
-    return _prefs.getBool("listToggle", true);
+    return _prefs.getBool("listToggle", Defaults::SpaceTogglesInList);
 }
 
 void ConfigManager::setListToggleEnabled(bool on) {
@@ -221,7 +220,7 @@ void ConfigManager::setListToggleEnabled(bool on) {
 }
 
 bool ConfigManager::getListAdjustEnabled() {
-    return _prefs.getBool("listAdjust", true);
+    return _prefs.getBool("listAdjust", Defaults::PlusMinusAdjustsInList);
 }
 
 void ConfigManager::setListAdjustEnabled(bool on) {
@@ -229,7 +228,7 @@ void ConfigManager::setListAdjustEnabled(bool on) {
 }
 
 bool ConfigManager::getTtsEnabled() {
-    return _prefs.getBool("ttsEnabled", true);
+    return _prefs.getBool("ttsEnabled", Defaults::TtsPlayback);
 }
 
 void ConfigManager::setTtsEnabled(bool enabled) {
@@ -237,15 +236,15 @@ void ConfigManager::setTtsEnabled(bool enabled) {
 }
 
 int ConfigManager::getTtsVolume() {
-    return _prefs.getInt("ttsVol", 80);
+    return _prefs.getInt("ttsVol", Defaults::TtsVolume.def);
 }
 
 void ConfigManager::setTtsVolume(int pct) {
-    _prefs.putInt("ttsVol", constrain(pct, 0, 100));
+    _prefs.putInt("ttsVol", Defaults::TtsVolume.clamp(pct));
 }
 
 bool ConfigManager::getTtsDebug() {
-    return _prefs.getBool("ttsDebug", false);
+    return _prefs.getBool("ttsDebug", Defaults::TtsDebug);
 }
 
 void ConfigManager::setTtsDebug(bool on) {
@@ -311,7 +310,7 @@ void ConfigManager::setDeepSleepTimeout(int timeout) {
 }
 
 int ConfigManager::getReconnectInterval() {
-    return _prefs.getInt("recon_int", 5000);
+    return _prefs.getInt("recon_int", Defaults::ReconnectInterval.def);
 }
 
 void ConfigManager::setReconnectInterval(int ms) {
@@ -319,7 +318,7 @@ void ConfigManager::setReconnectInterval(int ms) {
 }
 
 int ConfigManager::getScrollDelay() {
-    return _prefs.getInt("scroll_delay", 500);
+    return _prefs.getInt("scroll_delay", Defaults::ScrollStartDelay.def);
 }
 
 void ConfigManager::setScrollDelay(int ms) {
@@ -327,7 +326,7 @@ void ConfigManager::setScrollDelay(int ms) {
 }
 
 int ConfigManager::getScrollSpeed() {
-    return _prefs.getInt("scroll_speed", 100);
+    return _prefs.getInt("scroll_speed", Defaults::ScrollRepeat.def);
 }
 
 void ConfigManager::setScrollSpeed(int ms) {
@@ -335,7 +334,7 @@ void ConfigManager::setScrollSpeed(int ms) {
 }
 
 int ConfigManager::getTempStep() {
-    return _prefs.getInt("temp_step", 0);
+    return _prefs.getInt("temp_step", Defaults::TempStep);
 }
 
 void ConfigManager::setTempStep(int mode) {
@@ -343,7 +342,7 @@ void ConfigManager::setTempStep(int mode) {
 }
 
 int ConfigManager::getSeekStep() {
-    return _prefs.getInt("seek_step", 5);
+    return _prefs.getInt("seek_step", Defaults::SeekStepMin);
 }
 
 void ConfigManager::setSeekStep(int seconds) {
@@ -351,7 +350,7 @@ void ConfigManager::setSeekStep(int seconds) {
 }
 
 int ConfigManager::getSeekStepMax() {
-    return _prefs.getInt("seek_step_max", 30);
+    return _prefs.getInt("seek_step_max", Defaults::SeekStepMax);
 }
 
 void ConfigManager::setSeekStepMax(int seconds) {

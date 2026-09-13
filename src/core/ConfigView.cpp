@@ -1,5 +1,18 @@
 #include "ConfigView.h"
 #include "TextScroller.h"
+#include "SettingsDefaults.h"
+
+// Moves v one place along a list of choices, stopping at either end.
+template <size_t N>
+static int stepChoice(const int (&choices)[N], int v, int direction) {
+    for (size_t i = 0; i < N; i++) {
+        if (choices[i] != v) continue;
+        int j = (int)i + (direction > 0 ? 1 : -1);
+        return (j < 0 || j >= (int)N) ? v : choices[j];
+    }
+    return v;
+}
+
 ConfigView::ConfigView(ConfigManager& config, DiagnosticView& diagnosticView, HomeAssistantManager& haManager, std::function<void()> onSettingsChanged)
     : _config(config), _diagnosticView(diagnosticView), _haManager(haManager), _onSettingsChanged(onSettingsChanged), _scrollRepeater(config), _valueRepeater(config) {
     _settings.push_back({"Brightness", 10});
@@ -221,48 +234,24 @@ void ConfigView::toggleCurrent(int direction) {
         _showBattery = !_showBattery;
         _config.setShowBattery(_showBattery);
     } else if (_settings[_selectedIndex].type == 1) {
-        _reconInt += 1000 * direction;
-        if (_reconInt > 30000) _reconInt = 30000;
-        if (_reconInt < 1000) _reconInt = 1000;
+        _reconInt = Defaults::ReconnectInterval.adjust(_reconInt, direction);
         _config.setReconnectInterval(_reconInt);
     } else if (_settings[_selectedIndex].type == 2) {
         _favoritesSort = _favoritesSort == 0 ? 1 : 0;
         _config.setFavoritesSort(_favoritesSort);
     } else if (_settings[_selectedIndex].type == 5) {
-        _scrollDelay += 100 * direction;
-        if (_scrollDelay > 1000) _scrollDelay = 1000;
-        if (_scrollDelay < 200) _scrollDelay = 200;
+        _scrollDelay = Defaults::ScrollStartDelay.adjust(_scrollDelay, direction);
         _config.setScrollDelay(_scrollDelay);
     } else if (_settings[_selectedIndex].type == 6) {
-        _scrollSpeed += 20 * direction;
-        if (_scrollSpeed > 200) _scrollSpeed = 200;
-        if (_scrollSpeed < 40) _scrollSpeed = 40;
+        _scrollSpeed = Defaults::ScrollRepeat.adjust(_scrollSpeed, direction);
         _config.setScrollSpeed(_scrollSpeed);
     } else if (_settings[_selectedIndex].type == 7) {
-        if (direction > 0) {
-            if (_seekStep == 5) _seekStep = 10;
-            else if (_seekStep == 10) _seekStep = 15;
-            else if (_seekStep == 15) _seekStep = 30;
-        } else {
-            if (_seekStep == 30) _seekStep = 15;
-            else if (_seekStep == 15) _seekStep = 10;
-            else if (_seekStep == 10) _seekStep = 5;
-        }
+        _seekStep = stepChoice(Defaults::SeekStepMinChoices, _seekStep, direction);
         if (_seekStep > _seekStepMax) _seekStepMax = _seekStep;
         _config.setSeekStep(_seekStep);
         _config.setSeekStepMax(_seekStepMax);
     } else if (_settings[_selectedIndex].type == 8) {
-        if (direction > 0) {
-            if (_seekStepMax == 5) _seekStepMax = 10;
-            else if (_seekStepMax == 10) _seekStepMax = 15;
-            else if (_seekStepMax == 15) _seekStepMax = 30;
-            else if (_seekStepMax == 30) _seekStepMax = 60;
-        } else {
-            if (_seekStepMax == 60) _seekStepMax = 30;
-            else if (_seekStepMax == 30) _seekStepMax = 15;
-            else if (_seekStepMax == 15) _seekStepMax = 10;
-            else if (_seekStepMax == 10) _seekStepMax = 5;
-        }
+        _seekStepMax = stepChoice(Defaults::SeekStepMaxChoices, _seekStepMax, direction);
         if (_seekStepMax < _seekStep) _seekStep = _seekStepMax;
         _config.setSeekStep(_seekStep);
         _config.setSeekStepMax(_seekStepMax);
@@ -289,29 +278,19 @@ void ConfigView::toggleCurrent(int direction) {
         _listAdjust = !_listAdjust;
         _config.setListAdjustEnabled(_listAdjust);
     } else if (_settings[_selectedIndex].type == 10) {
-        _brightness += 25 * direction;
-        if (_brightness > 255) _brightness = 255;
-        if (_brightness < 25) _brightness = 25;
+        _brightness = Defaults::Brightness.adjust(_brightness, direction);
         _config.setDisplayBrightness(_brightness);
     } else if (_settings[_selectedIndex].type == 11) {
-        _dimTO += 10 * direction;
-        if (_dimTO > 120) _dimTO = 120;
-        if (_dimTO < 10) _dimTO = 10;
+        _dimTO = Defaults::DimTimeout.adjust(_dimTO, direction);
         _config.setDimTimeout(_dimTO);
     } else if (_settings[_selectedIndex].type == 12) {
-        _dispOffTO += 30 * direction;
-        if (_dispOffTO > 300) _dispOffTO = 300;
-        if (_dispOffTO < 30) _dispOffTO = 30;
+        _dispOffTO = Defaults::DisplayOffTimeout.adjust(_dispOffTO, direction);
         _config.setDisplayOffTimeout(_dispOffTO);
     } else if (_settings[_selectedIndex].type == 13) {
-        _softSleepTO += 30 * direction;
-        if (_softSleepTO > 600) _softSleepTO = 600;
-        if (_softSleepTO < 60) _softSleepTO = 60;
+        _softSleepTO = Defaults::SoftSleepTimeout.adjust(_softSleepTO, direction);
         _config.setSoftSleepTimeout(_softSleepTO);
     } else if (_settings[_selectedIndex].type == 14) {
-        _deepSleepTO += 300 * direction;
-        if (_deepSleepTO > 7200) _deepSleepTO = 7200;
-        if (_deepSleepTO < 300) _deepSleepTO = 300;
+        _deepSleepTO = Defaults::DeepSleepTimeout.adjust(_deepSleepTO, direction);
         _config.setDeepSleepTimeout(_deepSleepTO);
     } else if (_settings[_selectedIndex].type == 15) {
         _escDeepSleep = !_escDeepSleep;
@@ -320,9 +299,7 @@ void ConfigView::toggleCurrent(int direction) {
         _ttsEnabled = !_ttsEnabled;
         _config.setTtsEnabled(_ttsEnabled);
     } else if (_settings[_selectedIndex].type == 19) {
-        _ttsVolume += 10 * direction;
-        if (_ttsVolume > 100) _ttsVolume = 100;
-        if (_ttsVolume < 0) _ttsVolume = 0;
+        _ttsVolume = Defaults::TtsVolume.adjust(_ttsVolume, direction);
         _config.setTtsVolume(_ttsVolume);
         if (!M5.Speaker.isRunning()) {
             M5.Speaker.begin();

@@ -774,7 +774,7 @@ void AppController::checkPowerManagement() {
         WiFi.setSleep(WIFI_PS_MAX_MODEM);
     } else if (_powerState == PowerState::NORMAL && idleTime >= (uint32_t)_config.getDimTimeout()) {
         _powerState = PowerState::DIM;
-        M5.Display.setBrightness(10);
+        M5.Display.setBrightness(Defaults::DimmedBrightness);
     }
 }
 

@@ -104,7 +104,7 @@ void HomeAssistantManager::begin() {
     }
     
     // Fast reconnect
-    Serial.println(String("[HA] Attempting connection to ") + (isSecure ? "wss://" : "ws://") + host + ":" + String(port) + "/api/websocket"); _ws.setReconnectInterval(5000);
+    Serial.println(String("[HA] Attempting connection to ") + (isSecure ? "wss://" : "ws://") + host + ":" + String(port) + "/api/websocket"); _ws.setReconnectInterval(_config.getReconnectInterval());
 }
 
 void HomeAssistantManager::update() {

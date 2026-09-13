@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #include <vector>
+#include "SettingsDefaults.h"
 
 class ConfigManager {
 public:
@@ -138,12 +139,12 @@ private:
     // Cached copies of settings read every loop() iteration by checkPowerManagement();
     // avoids hammering NVS (and flooding logs with NOT_FOUND) when keys are unset.
     bool _cacheLoaded = false;
-    bool _escDeepSleep = false;
-    int _brightness = 200;
-    int _dimTO = 30;
-    int _dispOffTO = 60;
-    int _softSleepTO = 120;
-    int _deepSleepTO = 3600;
+    bool _escDeepSleep = Defaults::EscForSleep;
+    int _brightness = Defaults::Brightness.def;
+    int _dimTO = Defaults::DimTimeout.def;
+    int _dispOffTO = Defaults::DisplayOffTimeout.def;
+    int _softSleepTO = Defaults::SoftSleepTimeout.def;
+    int _deepSleepTO = Defaults::DeepSleepTimeout.def;
 };
 
 #endif // CONFIG_MANAGER_H

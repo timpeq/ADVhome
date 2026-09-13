@@ -281,6 +281,11 @@ and the build's git revision, and opens three pages:
 - **About & License** — version, copyright, license, and the attribution for
   every library compiled into the firmware.
 
+Every setting's default, and the range it can be set to, is in one table in
+[`src/core/SettingsDefaults.h`](src/core/SettingsDefaults.h). Edit a row there and
+rebuild to change what a new device starts with; a value already saved on a
+device takes precedence.
+
 Most rows change a value in place with Left/Right or `+`/`-`. Rows marked `>`
 open a full-screen page instead, on Enter, and Backspace returns to the list:
 
